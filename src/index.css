@@ -1,12 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-sans: "Inter", sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --color-fq-bg: #0e1117;
+  --color-fq-card: #161d24;
+  --color-fq-card-hover: #1a222c;
+  --color-fq-accent: #7ee8a2;
+  --color-fq-accent-dark: #3db87a;
+  --color-fq-amber: #f6a623;
+  --color-fq-blue: #69c3f0;
+  --color-fq-muted: rgba(255, 255, 255, 0.45);
+  --color-fq-border: rgba(255, 255, 255, 0.07);
+  --color-fq-avatar: #1c2d26;
+  --color-fq-avatar-you: #1a2c38;
 }
 
-/* Mobile-first base */
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -14,8 +24,9 @@ html {
 
 body {
   overscroll-behavior: none;
-  background: #050505;
+  background: var(--color-fq-bg);
   min-height: 100dvh;
+  font-family: var(--font-sans);
 }
 
 #root {
@@ -23,14 +34,17 @@ body {
   overflow: hidden;
 }
 
-/* Reserve space above fixed bottom nav (includes FAB overhang) */
 .main-with-nav {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Safe area utilities for notched devices */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Comfortable top inset on every main screen (safe area + breathing room) */
+.fq-top {
+  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
 }
 
 .safe-bottom {
@@ -42,25 +56,138 @@ body {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* Touch-friendly minimum tap targets */
 .touch-target {
   min-height: 44px;
   min-width: 44px;
 }
 
-/* Smooth scrolling in scroll containers */
 .scroll-container {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
 
-/* Range slider thumb styling for mobile */
+/* Shared FitQuest surfaces */
+.fq-card {
+  background: var(--color-fq-card);
+  border: 1px solid var(--color-fq-border);
+  border-radius: 1rem;
+}
+
+.fq-section-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-fq-muted);
+  letter-spacing: 0.04em;
+  margin: 1.125rem 0 0.625rem;
+}
+
+.fq-xp-bar-bg {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.fq-xp-bar-fill {
+  height: 100%;
+  background: var(--color-fq-accent);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.fq-progress-bar-bg {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.fq-progress-bar-fill {
+  height: 100%;
+  background: var(--color-fq-accent);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.fq-progress-bar-fill.done {
+  background: var(--color-fq-accent-dark);
+}
+
+.fq-chip-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(126, 232, 162, 0.12);
+  color: var(--color-fq-accent);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.fq-chip-pr {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(246, 166, 35, 0.15);
+  color: var(--color-fq-amber);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.fq-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-fq-avatar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-fq-accent);
+  flex-shrink: 0;
+}
+
+.fq-avatar.you {
+  background: var(--color-fq-avatar-you);
+  color: var(--color-fq-blue);
+}
+
+.fq-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem;
+  border-radius: 1rem;
+  background: var(--color-fq-accent);
+  color: var(--color-fq-bg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.fq-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
+.fq-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
   border-radius: 9999px;
-  background: rgb(39 39 42);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -69,8 +196,8 @@ input[type="range"]::-webkit-slider-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgb(34 211 238);
-  border: 2px solid #050505;
+  background: var(--color-fq-accent);
+  border: 2px solid var(--color-fq-bg);
   cursor: pointer;
 }
 
@@ -78,12 +205,11 @@ input[type="range"]::-moz-range-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgb(34 211 238);
-  border: 2px solid #050505;
+  background: var(--color-fq-accent);
+  border: 2px solid var(--color-fq-bg);
   cursor: pointer;
 }
 
-/* Hide number input spinners on mobile */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;

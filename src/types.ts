@@ -87,6 +87,7 @@ export interface UserProfile {
   globalRank: number;
   workoutsCompleted: number;
   onboardingComplete: boolean;
+  restDaysLogged: number;
   playerType: "Achiever" | "Explorer" | "Socialiser" | "Killer" | "Undecided";
   octalysisScores: {
     meaning: number;

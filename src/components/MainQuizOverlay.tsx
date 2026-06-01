@@ -78,36 +78,38 @@ export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose }
   const currentDrive = drives[activeQuestion];
 
   return (
-    <div className="fixed inset-0 bg-[#050505]/95 backdrop-blur-md z-40 flex flex-col safe-top safe-bottom safe-x">
-      <div className="flex justify-between items-center px-4 py-3 border-b border-white/5 shrink-0">
-        <span className="text-sm font-semibold text-white">Motivation Quiz</span>
+    <div className="fixed inset-0 bg-fq-bg/95 backdrop-blur-md z-40 flex flex-col fq-top safe-bottom safe-x">
+      <div className="flex justify-between items-center px-4 py-3 border-b border-white/[0.06] shrink-0">
+        <span className="text-sm font-medium text-white">Motivation quiz</span>
         <button onClick={onClose} className="p-2 rounded-xl active:bg-white/5 touch-target" aria-label="Close">
-          <X className="w-5 h-5 text-slate-400" />
+          <X className="w-5 h-5 text-white/45" />
         </button>
       </div>
 
-      <div className="px-4 py-3 shrink-0">
-        <div className="flex justify-between text-xs text-cyan-400 mb-2">
-          <span>{activeQuestion + 1} of {drives.length}</span>
+      <div className="px-3.5 py-3 shrink-0">
+        <div className="flex justify-between text-xs text-fq-accent mb-2">
+          <span>
+            {activeQuestion + 1} of {drives.length}
+          </span>
           <span>{Math.round(((activeQuestion + 1) / drives.length) * 100)}%</span>
         </div>
-        <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+        <div className="fq-xp-bar-bg h-1.5">
           <div
-            className="bg-cyan-400 h-full rounded-full transition-all"
+            className="fq-xp-bar-fill"
             style={{ width: `${((activeQuestion + 1) / drives.length) * 100}%` }}
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scroll-container px-4 flex flex-col justify-center">
+      <div className="flex-1 overflow-y-auto scroll-container px-3.5 flex flex-col justify-center">
         <div className="text-5xl text-center mb-4">{currentDrive.icon}</div>
-        <h3 className="text-lg font-bold text-white text-center mb-2 font-serif italic">{currentDrive.name}</h3>
-        <p className="text-sm text-slate-400 text-center leading-relaxed mb-8 px-2">{currentDrive.desc}</p>
+        <h3 className="text-lg font-medium text-white text-center mb-2">{currentDrive.name}</h3>
+        <p className="text-sm text-white/45 text-center leading-relaxed mb-8 px-2">{currentDrive.desc}</p>
 
-        <div className="bg-white/5 border border-white/5 p-5 rounded-2xl">
-          <div className="flex justify-between text-xs text-slate-500 mb-4">
+        <div className="fq-card rounded-2xl p-5">
+          <div className="flex justify-between text-xs text-white/45 mb-4">
             <span>Not important</span>
-            <span className="text-cyan-400 font-bold text-base">{scores[currentDrive.key]}%</span>
+            <span className="text-fq-accent font-medium text-base">{scores[currentDrive.key]}%</span>
             <span>Very important</span>
           </div>
           <input
@@ -121,22 +123,22 @@ export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-4 border-t border-white/5 shrink-0 safe-bottom">
+      <div className="grid grid-cols-2 gap-3 p-3.5 border-t border-white/[0.06] shrink-0 safe-bottom">
         <button
           onClick={onClose}
-          className="py-4 rounded-2xl border border-white/10 text-slate-400 text-sm font-semibold active:bg-white/5"
+          className="py-3.5 rounded-2xl border border-white/10 text-white/45 text-sm font-medium active:bg-white/5"
         >
           Cancel
         </button>
         <button
           onClick={handleNext}
-          className="py-4 rounded-2xl bg-white text-black text-sm font-bold active:bg-cyan-400 flex items-center justify-center gap-1.5"
+          className="py-3.5 rounded-2xl bg-fq-accent text-fq-bg text-sm font-medium active:opacity-90 flex items-center justify-center gap-1.5"
         >
           <span>{activeQuestion < drives.length - 1 ? "Next" : "Save"}</span>
           {activeQuestion < drives.length - 1 ? (
             <ChevronRight className="w-4 h-4" />
           ) : (
-            <Check className="w-4 h-4 stroke-[3px]" />
+            <Check className="w-4 h-4 stroke-[2.5px]" />
           )}
         </button>
       </div>

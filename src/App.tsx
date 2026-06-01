@@ -74,6 +74,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<Tab>("Home");
   const [showDrivesQuiz, setShowDrivesQuiz] = useState(false);
+  const [homeToast, setHomeToast] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem("fq_profile_v2", JSON.stringify(userProfile));
@@ -162,49 +163,76 @@ export default function App() {
   };
 
   const handleFinishWorkout = (workout: Workout) => {
+    const hasPR = workout.exercises.some((e) => e.sets.some((s) => s.isPR));
+
+    const lastWorkout = workoutHistory[0];
+    let missedDay = false;
+    if (lastWorkout) {
+      const lastDate = new Date(lastWorkout.rawDate);
+      const today = new Date();
+      const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      missedDay = diffDays > 1;
+    }
+
+    const newBossWorkouts = Math.min(bossChallenge.workoutsGoal, bossChallenge.workoutsCurrent + 1);
+    const newBossPRs = hasPR
+      ? Math.min(bossChallenge.prGoalCount, bossChallenge.prCurrentCount + 1)
+      : bossChallenge.prCurrentCount;
+    const bossJustCompleted =
+      !bossChallenge.completed &&
+      newBossWorkouts >= bossChallenge.workoutsGoal &&
+      newBossPRs >= bossChallenge.prGoalCount;
+
     setWorkoutHistory((prev) => [workout, ...prev]);
 
     setUserProfile((prev) => {
-      const activeStreak = prev.streak + 1;
-      const totalCount = prev.workoutsCompleted + 1;
-      const nextGlobalPos = Math.max(10, prev.globalRank - (workout.xpEarned > 500 ? 1 : 0));
+      let newStreak = prev.streak;
+      let newShields = prev.streakShields;
+
+      if (missedDay) {
+        if (prev.streakShields > 0) {
+          newShields = prev.streakShields - 1;
+        } else {
+          newStreak = 1;
+        }
+      } else {
+        newStreak = prev.streak + 1;
+      }
 
       return {
         ...prev,
-        streak: activeStreak,
-        workoutsCompleted: totalCount,
-        globalRank: nextGlobalPos
+        streak: newStreak,
+        streakShields: newShields + (bossJustCompleted ? bossChallenge.shieldReward : 0),
+        workoutsCompleted: prev.workoutsCompleted + 1,
+        globalRank: Math.max(10, prev.globalRank - (workout.xpEarned > 500 ? 1 : 0))
       };
     });
 
-    const hasPR = workout.exercises.some((e) => e.sets.some((s) => s.isPR));
+    if (missedDay && userProfile.streakShields > 0) {
+      setHomeToast("Streak Shield used! Your streak is protected.");
+    }
+
+    setBossChallenge((prev) => ({
+      ...prev,
+      workoutsCurrent: newBossWorkouts,
+      prCurrentCount: newBossPRs,
+      completed: bossJustCompleted || prev.completed
+    }));
+
     if (hasPR) {
       setBadges((prev) =>
         prev.map((b) => (b.id === "pr_hunter" ? { ...b, unlockedAt: new Date().toISOString() } : b))
       );
     }
 
-    setBossChallenge((prev) => {
-      const updatedCount = prev.workoutsCurrent + 1;
-      const isCompleteNow = updatedCount >= prev.workoutsGoal;
-
-      if (isCompleteNow && !prev.completed) {
-        setBadges((prevBadges) =>
-          prevBadges.map((b) => (b.id === prev.badgeReward ? { ...b, unlockedAt: new Date().toISOString() } : b))
-        );
-        handleIncrementXP(prev.xpReward);
-        return {
-          ...prev,
-          workoutsCurrent: updatedCount,
-          completed: true
-        };
-      }
-
-      return {
-        ...prev,
-        workoutsCurrent: Math.min(prev.workoutsGoal, updatedCount)
-      };
-    });
+    if (bossJustCompleted) {
+      setBadges((prev) =>
+        prev.map((b) =>
+          b.id === bossChallenge.badgeReward ? { ...b, unlockedAt: new Date().toISOString() } : b
+        )
+      );
+      handleIncrementXP(bossChallenge.xpReward);
+    }
 
     handleIncrementXP(workout.xpEarned);
 
@@ -245,6 +273,42 @@ export default function App() {
     );
   };
 
+  const handleLogRestDay = () => {
+    setUserProfile((prev) => ({
+      ...prev,
+      streak: prev.streak + 1,
+      restDaysLogged: (prev.restDaysLogged || 0) + 1
+    }));
+    handleIncrementXP(100);
+
+    setSocialFeed((prev) => {
+      const me = friendsLeaderboard.find((f) => f.isMe);
+      const restEntry: SocialWorkout = {
+        id: `sw_rest_${Date.now()}`,
+        authorName: me?.name || userProfile.name,
+        authorAvatar: me?.avatar || userProfile.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase(),
+        authorTier: userProfile.rank,
+        isMe: true,
+        highFiveCount: 0,
+        workout: {
+          id: `rest_${Date.now()}`,
+          title: "Recovery Day",
+          date: "Just now",
+          rawDate: new Date().toISOString(),
+          duration: 0,
+          exercises: [],
+          xpEarned: 100
+        }
+      };
+      return [restEntry, ...prev];
+    });
+  };
+
   const handleUpdateLeaderboard = (friends: LeaderboardEntry[], global: LeaderboardEntry[]) => {
     setFriendsLeaderboard(friends);
     setGlobalLeaderboard(global);
@@ -265,7 +329,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-dvh bg-[#050505] flex flex-col font-sans text-slate-100 safe-x overflow-hidden">
+    <div className="h-dvh bg-fq-bg flex flex-col font-sans text-[#f0f0f0] safe-x overflow-hidden">
       {!userProfile.onboardingComplete && (
         <OnboardingSurvey onComplete={handleOnboardingComplete} />
       )}
@@ -280,59 +344,64 @@ export default function App() {
 
       <main className="flex-1 min-h-0 overflow-hidden main-with-nav">
         <div className="h-full min-h-0">
-        {activeTab === "Home" && (
-          <HomeView
-            userProfile={userProfile}
-            activeChallenges={activeChallenges}
-            socialFeed={socialFeed}
-            onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
-            onNavigateToTab={setActiveTab}
-            onHighFiveFeed={handleHighFiveFeed}
-          />
-        )}
-        {activeTab === "Log" && (
-          <WorkoutLogView
-            userProfile={userProfile}
-            lastWorkout={workoutHistory[0]}
-            onFinishWorkout={handleFinishWorkout}
-            onNavigateToTab={setActiveTab}
-          />
-        )}
-        {activeTab === "Rank" && (
-          <LeaderboardView
-            userProfile={userProfile}
-            friendsLeaderboard={friendsLeaderboard}
-            globalLeaderboard={globalLeaderboard}
-            onChangeLeaderboards={handleUpdateLeaderboard}
-          />
-        )}
-        {activeTab === "Goals" && (
-          <ChallengesView
-            bossChallenge={bossChallenge}
-            activeChallenges={activeChallenges}
-            onCompleteChallenge={handleCompleteChallenge}
-            onNavigateToTab={setActiveTab}
-          />
-        )}
-        {activeTab === "Profile" && (
-          <ProfileView
-            userProfile={userProfile}
-            workoutHistory={workoutHistory}
-            badges={badges}
-            onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
-            onNavigateToTab={setActiveTab}
-            onOpenDrivesQuiz={() => setShowDrivesQuiz(true)}
-            onResetApp={resetAllLocalState}
-          />
-        )}
+          {activeTab === "Home" && (
+            <HomeView
+              userProfile={userProfile}
+              workoutHistory={workoutHistory}
+              activeChallenges={activeChallenges}
+              socialFeed={socialFeed}
+              homeToast={homeToast}
+              onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
+              onNavigateToTab={setActiveTab}
+              onHighFiveFeed={handleHighFiveFeed}
+              onLogRestDay={handleLogRestDay}
+              onClearHomeToast={() => setHomeToast(null)}
+            />
+          )}
+          {activeTab === "Log" && (
+            <WorkoutLogView
+              userProfile={userProfile}
+              lastWorkout={workoutHistory[0]}
+              onFinishWorkout={handleFinishWorkout}
+              onNavigateToTab={setActiveTab}
+            />
+          )}
+          {activeTab === "Rank" && (
+            <LeaderboardView
+              userProfile={userProfile}
+              friendsLeaderboard={friendsLeaderboard}
+              globalLeaderboard={globalLeaderboard}
+              onChangeLeaderboards={handleUpdateLeaderboard}
+            />
+          )}
+          {activeTab === "Goals" && (
+            <ChallengesView
+              bossChallenge={bossChallenge}
+              activeChallenges={activeChallenges}
+              onCompleteChallenge={handleCompleteChallenge}
+              onNavigateToTab={setActiveTab}
+            />
+          )}
+          {activeTab === "Profile" && (
+            <ProfileView
+              userProfile={userProfile}
+              workoutHistory={workoutHistory}
+              badges={badges}
+              onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
+              onNavigateToTab={setActiveTab}
+              onOpenDrivesQuiz={() => setShowDrivesQuiz(true)}
+              onResetApp={resetAllLocalState}
+            />
+          )}
         </div>
       </main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-30 bg-[#050505]/95 backdrop-blur-lg border-t border-white/10 safe-bottom safe-x"
+        className="fixed bottom-0 left-0 right-0 z-30 bg-fq-bg border-t border-white/[0.07] safe-bottom safe-x"
+        style={{ height: "calc(60px + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Main navigation"
       >
-        <div className="flex items-end justify-around px-1 pt-2 pb-1">
+        <div className="flex items-center justify-around h-[60px] px-1">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
             const isLog = id === "Log";
@@ -344,24 +413,20 @@ export default function App() {
                   onClick={() => setActiveTab(id)}
                   aria-label={label}
                   aria-current={isActive ? "page" : undefined}
-                  className="flex flex-col items-center -mt-5 touch-target"
+                  className="flex flex-col items-center justify-center flex-none mx-1 touch-target"
+                  style={{ marginBottom: 4 }}
                 >
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-95 ${
-                      isActive
-                        ? "bg-cyan-400 text-black shadow-cyan-400/30"
-                        : "bg-white text-black shadow-white/10"
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform active:scale-95 ${
+                      isActive ? "ring-2 ring-fq-accent/40" : ""
                     }`}
+                    style={{
+                      background: "linear-gradient(135deg, #7ee8a2, #3db87a)",
+                      color: "#0e1117"
+                    }}
                   >
-                    <Icon className="w-7 h-7 stroke-[2.5px]" />
+                    <Icon className="w-[22px] h-[22px] stroke-[2.5px]" />
                   </div>
-                  <span
-                    className={`text-[11px] font-medium mt-1.5 ${
-                      isActive ? "text-cyan-400" : "text-slate-500"
-                    }`}
-                  >
-                    {label}
-                  </span>
                 </button>
               );
             }
@@ -372,12 +437,12 @@ export default function App() {
                 onClick={() => setActiveTab(id)}
                 aria-label={label}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 flex-1 py-1 touch-target transition-colors active:scale-95 ${
-                  isActive ? "text-cyan-400" : "text-slate-500"
+                className={`flex flex-col items-center gap-[3px] flex-1 touch-target transition-colors active:scale-95 ${
+                  isActive ? "text-fq-accent" : "text-white/35"
                 }`}
               >
-                <Icon className={`w-6 h-6 ${isActive ? "stroke-[2.5px]" : ""}`} />
-                <span className="text-[11px] font-medium">{label}</span>
+                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.25 : 1.75} />
+                <span className="text-[10px] font-medium">{label}</span>
               </button>
             );
           })}

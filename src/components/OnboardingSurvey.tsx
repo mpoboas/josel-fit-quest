@@ -120,28 +120,26 @@ export default function OnboardingSurvey({ onComplete }: Props) {
   const currentQuestion = questions[step];
 
   return (
-    <div className="fixed inset-0 bg-[#050505] z-50 flex flex-col safe-top safe-bottom safe-x">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/30 via-[#050505] to-[#050505] pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col h-full px-4 py-6">
+    <div className="fixed inset-0 bg-fq-bg z-50 flex flex-col fq-top safe-bottom safe-x">
+      <div className="relative z-10 flex flex-col h-full px-4 pt-2 pb-6">
         <div className="mb-6">
-          <div className="flex justify-between text-xs text-cyan-400 mb-3">
-            <span className="font-semibold">FitQuest</span>
-            <span>Step {step + 1} of {questions.length}</span>
+          <div className="flex justify-between text-xs text-fq-accent mb-3">
+            <span className="font-medium">FitQuest</span>
+            <span>
+              Step {step + 1} of {questions.length}
+            </span>
           </div>
-          <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+          <div className="fq-xp-bar-bg h-1.5">
             <div
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-300 rounded-full"
+              className="fq-xp-bar-fill"
               style={{ width: `${((step + 1) / questions.length) * 100}%` }}
             />
           </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-center">
-          <h1 className="text-2xl font-bold text-white mb-2 font-serif italic leading-tight">
-            {currentQuestion.title}
-          </h1>
-          <p className="text-sm text-slate-400 mb-6">{currentQuestion.description}</p>
+          <h1 className="text-2xl font-medium text-white mb-2 leading-tight">{currentQuestion.title}</h1>
+          <p className="text-sm text-white/45 mb-6">{currentQuestion.description}</p>
 
           <div className="space-y-3">
             {currentQuestion.options.map((opt) => {
@@ -150,14 +148,14 @@ export default function OnboardingSurvey({ onComplete }: Props) {
                 <button
                   key={opt.value}
                   onClick={() => handleSelectOption(currentQuestion.id, opt.value)}
-                  className="w-full flex items-center gap-4 text-left p-4 rounded-2xl bg-white/5 active:bg-white/10 border border-white/5 active:border-cyan-400/30 active:scale-[0.98] transition-all"
+                  className="w-full flex items-center gap-4 text-left p-4 rounded-2xl fq-card active:bg-fq-card-hover active:scale-[0.98] transition-all"
                 >
-                  <div className="p-3 rounded-xl shrink-0 text-cyan-400 bg-cyan-500/10 border border-cyan-500/20">
+                  <div className="p-3 rounded-xl shrink-0 text-fq-accent bg-fq-accent/10 border border-fq-accent/20">
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white">{opt.lbl}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{opt.desc}</div>
+                    <div className="text-sm font-medium text-white">{opt.lbl}</div>
+                    <div className="text-xs text-white/45 mt-0.5">{opt.desc}</div>
                   </div>
                 </button>
               );

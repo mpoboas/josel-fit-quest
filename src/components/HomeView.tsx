@@ -1,14 +1,27 @@
-import { UserProfile, Challenge, SocialWorkout } from "../types";
-import { Flame, Shield, Dumbbell, Activity, Award, Clock, Users, Zap } from "lucide-react";
-import { useState } from "react";
+import { UserProfile, Challenge, SocialWorkout, Workout } from "../types";
+import {
+  Award,
+  Clock,
+  Zap,
+  Trophy,
+  Shield,
+  Heart,
+  AlertTriangle,
+  Hand
+} from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 
 interface Props {
   userProfile: UserProfile;
+  workoutHistory: Workout[];
   activeChallenges: Challenge[];
   socialFeed: SocialWorkout[];
+  homeToast?: string | null;
   onChangeUserProfile: (profile: Partial<UserProfile>) => void;
   onNavigateToTab: (tab: string) => void;
   onHighFiveFeed: (id: string) => void;
+  onLogRestDay: () => void;
+  onClearHomeToast?: () => void;
 }
 
 function getGreeting() {
@@ -20,7 +33,8 @@ function getGreeting() {
 
 function summarizeExercises(entry: SocialWorkout) {
   const names = entry.workout.exercises.map((e) => e.name);
-  if (names.length <= 2) return names.join(" · ");
+  if (names.length === 0) return "Recovery session";
+  if (names.length <= 2) return names.join(" & ");
   return `${names.slice(0, 2).join(", ")} +${names.length - 2} more`;
 }
 
@@ -28,23 +42,49 @@ function hasPR(entry: SocialWorkout) {
   return entry.workout.exercises.some((e) => e.sets.some((s) => s.isPR));
 }
 
-const TIER_COLORS: Record<string, string> = {
-  Bronze: "text-amber-600",
-  Silver: "text-slate-300",
-  Gold: "text-yellow-400",
-  Platinum: "text-cyan-300",
-  Elite: "text-purple-400"
-};
+const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Elite"];
+const SEASON_END = new Date("2026-07-01T00:00:00.000Z");
 
 export default function HomeView({
   userProfile,
+  workoutHistory,
   activeChallenges,
   socialFeed,
+  homeToast,
   onChangeUserProfile,
   onNavigateToTab,
-  onHighFiveFeed
+  onHighFiveFeed,
+  onLogRestDay,
+  onClearHomeToast
 }: Props) {
   const [notification, setNotification] = useState<string | null>(null);
+  const [wellbeingDismissed, setWellbeingDismissed] = useState(false);
+
+  const initials = userProfile.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  useEffect(() => {
+    if (homeToast) {
+      showNotification(homeToast);
+      onClearHomeToast?.();
+    }
+  }, [homeToast]);
+
+  const showWellbeing = useMemo(() => {
+    if (userProfile.streak < 7 || wellbeingDismissed) return false;
+    const realWorkouts = workoutHistory.filter((w) => w.exercises.length > 0).slice(0, 3);
+    if (realWorkouts.length < 3) return false;
+    return realWorkouts.every((w) => !w.exercises.some((e) => e.sets.some((s) => s.isPR)));
+  }, [userProfile.streak, workoutHistory, wellbeingDismissed]);
+
+  const daysUntilReset = Math.ceil((SEASON_END.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const showRankAlert = daysUntilReset >= 0 && daysUntilReset <= 7;
+  const currentTierIdx = TIER_ORDER.indexOf(userProfile.rank);
+  const demotionTier = currentTierIdx > 0 ? TIER_ORDER[currentTierIdx - 1] : userProfile.rank;
 
   const buyShield = () => {
     if (userProfile.xp >= 500) {
@@ -72,144 +112,212 @@ export default function HomeView({
   const xpPercent = Math.min(100, (userProfile.xp / userProfile.xpToNextLevel) * 100);
 
   return (
-    <div className="h-full min-h-0 bg-[#050505] text-slate-100 overflow-y-auto scroll-container">
+    <div className="h-full min-h-0 bg-fq-bg text-[#f0f0f0] overflow-y-auto scroll-container">
       {notification && (
-        <div className="fixed top-0 left-0 right-0 z-50 safe-top safe-x px-4 pt-3">
-          <div className="bg-zinc-900 border border-cyan-500/30 text-cyan-100 px-4 py-3 rounded-2xl shadow-2xl text-sm flex items-center gap-2">
-            <Award className="w-4 h-4 text-cyan-400 shrink-0" />
+        <div className="fixed top-0 left-0 right-0 z-50 fq-top safe-x px-4 pb-1">
+          <div className="fq-card px-4 py-3 text-sm flex items-center gap-2 border-fq-accent/25 text-fq-accent">
+            <Award className="w-4 h-4 shrink-0" />
             <span>{notification}</span>
           </div>
         </div>
       )}
 
-      {/* Header + stats — single block, never flex-shrinks */}
-      <section className="px-4 pt-3 pb-4 safe-top">
-        <div className="bg-gradient-to-b from-cyan-950/30 to-zinc-900/40 rounded-3xl border border-white/10 p-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative">
-            <div className="text-sm text-slate-500">{getGreeting()},</div>
-            <h1 className="text-2xl font-serif italic text-white mt-0.5">{userProfile.name.split(" ")[0]}</h1>
+      {/* Header */}
+      <header className="px-4 fq-top pb-0">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-[13px] text-white/50">{getGreeting()},</p>
+            <h1 className="text-[22px] font-medium text-white leading-tight">
+              {userProfile.name.split(" ")[0]}
+            </h1>
           </div>
+          <button
+            onClick={() => onNavigateToTab("Profile")}
+            className="w-[38px] h-[38px] rounded-full bg-fq-avatar border-2 border-fq-accent-dark flex items-center justify-center text-[13px] font-medium text-fq-accent shrink-0 active:scale-95 transition-transform"
+            aria-label="Open profile"
+          >
+            {initials}
+          </button>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-white">
-              <Award className="w-4 h-4 text-cyan-400" />
-              <span className="font-serif italic text-cyan-400 font-bold">{userProfile.rank}</span>
+        <div className="flex flex-wrap gap-1.5 mb-3.5">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.12] text-[#c0c0d8] border border-white/25">
+            <Award className="w-3 h-3" />
+            {userProfile.rank}
+          </span>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-fq-accent/10 text-fq-accent border border-fq-accent/20">
+            {userProfile.playerType}
+          </span>
+        </div>
+      </header>
+
+      <div className="px-4 pb-6 space-y-2.5">
+        {/* XP card */}
+        <div className="fq-card rounded-[18px] p-3.5 px-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-[13px] text-white/50">Level</p>
+              <p className="text-xl font-medium text-white">{userProfile.level}</p>
             </div>
-            <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-300">
-              {userProfile.playerType}
-            </div>
+            <p className="text-xs text-fq-accent font-medium">
+              {userProfile.xp.toLocaleString()} / {userProfile.xpToNextLevel.toLocaleString()} XP
+            </p>
           </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between items-end">
-              <span className="text-sm text-slate-300">Level {userProfile.level}</span>
-              <span className="text-xs text-cyan-400 font-medium">
-                {userProfile.xp.toLocaleString()} / {userProfile.xpToNextLevel.toLocaleString()} XP
-              </span>
-            </div>
-            <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-              <div className="bg-cyan-400 h-full rounded-full transition-all duration-500" style={{ width: `${xpPercent}%` }} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/10">
-            <div className="bg-black/20 rounded-xl p-3 text-center">
-              <div className="text-xl font-serif italic text-white">{userProfile.workoutsCompleted || 0}</div>
-              <div className="text-xs text-slate-500 mt-0.5">Total</div>
-            </div>
-            <button
-              onClick={() => onNavigateToTab("Profile")}
-              className="bg-black/20 rounded-xl p-3 text-center active:bg-cyan-500/10 active:scale-[0.97] transition-all"
-            >
-              <div className="text-xl font-serif italic text-cyan-400 flex items-center justify-center gap-1">
-                <Flame className="w-4 h-4" />
-                {userProfile.streak}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">Streak</div>
-            </button>
-            <button
-              onClick={() => onNavigateToTab("Rank")}
-              className="bg-black/20 rounded-xl p-3 text-center active:bg-cyan-500/10 active:scale-[0.97] transition-all"
-            >
-              <div className="text-xl font-serif italic text-white">#{userProfile.globalRank}</div>
-              <div className="text-xs text-slate-500 mt-0.5">Rank</div>
-            </button>
+          <div className="fq-xp-bar-bg">
+            <div className="fq-xp-bar-fill" style={{ width: `${xpPercent}%` }} />
           </div>
         </div>
-      </section>
 
-      {/* Friend Activity Feed */}
-      <div className="px-4 pt-5 pb-2">
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-semibold text-white">Friend Activity</h2>
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="fq-card rounded-[14px] py-3 px-2 text-center">
+            <p className="text-xl font-medium text-white">{userProfile.workoutsCompleted || 0}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">Total workouts</p>
           </div>
-          <button onClick={() => onNavigateToTab("Rank")} className="text-xs text-cyan-400 font-medium">
+          <button
+            onClick={() => onNavigateToTab("Profile")}
+            className="fq-card rounded-[14px] py-3 px-2 text-center active:scale-[0.97] transition-transform"
+          >
+            <p className="text-xl font-medium text-fq-amber">🔥 {userProfile.streak}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">Day streak</p>
+          </button>
+          <button
+            onClick={() => onNavigateToTab("Rank")}
+            className="fq-card rounded-[14px] py-3 px-2 text-center active:scale-[0.97] transition-transform"
+          >
+            <p className="text-xl font-medium text-fq-accent">#{userProfile.globalRank}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">Global rank</p>
+          </button>
+        </div>
+
+        {showRankAlert && (
+          <div className="fq-card rounded-2xl p-3.5 flex items-start gap-2.5 border-rose-500/20 bg-rose-500/5">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-rose-300">
+                Season resets in {daysUntilReset} day{daysUntilReset !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-white/45 mt-0.5 leading-relaxed">
+                Defend your {userProfile.rank} rank or drop to {demotionTier}. Log a workout to stay ahead.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Streak protection */}
+        <div className="fq-card rounded-2xl p-3.5 flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-fq-accent/10 border border-fq-accent/20 flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5 text-fq-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white">Streak protection</p>
+            <p className="text-xs text-white/45 mt-0.5">
+              {userProfile.streakShields > 0
+                ? `${userProfile.streakShields} shield${userProfile.streakShields > 1 ? "s" : ""} active`
+                : "Protect your streak for 500 XP"}
+            </p>
+          </div>
+          {userProfile.streakShields > 0 ? (
+            <div className="px-3 py-1.5 rounded-xl bg-fq-accent/12 border border-fq-accent/20 text-fq-accent text-sm font-medium flex items-center gap-1 shrink-0">
+              <Shield className="w-4 h-4" />
+              ×{userProfile.streakShields}
+            </div>
+          ) : (
+            <button
+              onClick={buyShield}
+              className="px-4 py-2 rounded-xl bg-fq-accent text-fq-bg text-xs font-medium shrink-0 active:opacity-90"
+            >
+              Buy
+            </button>
+          )}
+        </div>
+
+        {showWellbeing && (
+          <div className="fq-card rounded-2xl p-3.5 border-fq-amber/20 bg-fq-amber/5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-fq-amber/15 border border-fq-amber/25 flex items-center justify-center shrink-0">
+                <Heart className="w-5 h-5 text-fq-amber" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-fq-amber">Recovery recommended</p>
+                <p className="text-xs text-white/45 mt-1 leading-relaxed">
+                  {userProfile.streak} days straight with no new PRs. A rest day earns{" "}
+                  <span className="text-fq-amber font-medium">+100 XP</span> and keeps your streak.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      onLogRestDay();
+                      setWellbeingDismissed(true);
+                      showNotification("Rest day logged! +100 XP. Streak protected.");
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-fq-amber/20 border border-fq-amber/30 text-fq-amber text-xs font-medium active:opacity-80"
+                  >
+                    Log rest day
+                  </button>
+                  <button
+                    onClick={() => setWellbeingDismissed(true)}
+                    className="px-4 py-2 rounded-xl bg-white/5 text-white/45 text-xs font-medium active:bg-white/10"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Friend activity */}
+        <div className="flex items-center justify-between">
+          <p className="fq-section-title !mt-4 !mb-0">Friend activity</p>
+          <button
+            onClick={() => onNavigateToTab("Rank")}
+            className="text-xs text-fq-accent font-medium -mt-1"
+          >
             Leaderboard
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {socialFeed.map((entry) => (
-            <article
-              key={entry.id}
-              className={`bg-zinc-900/50 border rounded-2xl p-4 ${
-                entry.isMe ? "border-cyan-500/20" : "border-white/5"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border ${
-                    entry.isMe
-                      ? "bg-cyan-950/40 text-cyan-300 border-cyan-500/30"
-                      : "bg-zinc-800 text-slate-200 border-white/10"
-                  }`}
-                >
-                  {entry.authorAvatar}
+            <article key={entry.id} className="fq-card rounded-2xl p-3.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`fq-avatar ${entry.isMe ? "you" : ""}`}>{entry.authorAvatar}</div>
+                  <p className="text-[13px] font-medium text-white">
+                    {entry.isMe ? "You" : entry.authorName}
+                    <span className="text-[10px] font-normal text-white/35 ml-1">
+                      · {entry.authorTier}
+                    </span>
+                  </p>
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-bold text-white">
-                      {entry.isMe ? "You" : entry.authorName}
-                    </span>
-                    {entry.isMe && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-400/15 text-cyan-400 font-semibold">
-                        Your workout
-                      </span>
-                    )}
-                    <span className={`text-[10px] font-semibold ${TIER_COLORS[entry.authorTier] || "text-slate-400"}`}>
-                      {entry.authorTier}
-                    </span>
-                    <span className="text-xs text-slate-500 ml-auto shrink-0">{entry.workout.date}</span>
-                  </div>
-
-                  <h3 className="text-sm font-semibold text-white mt-1 font-serif italic">{entry.workout.title}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{summarizeExercises(entry)}</p>
-
-                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                      <Clock className="w-3.5 h-3.5" />
-                      {entry.workout.duration} min
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-cyan-400 font-semibold">
-                      <Zap className="w-3.5 h-3.5" />
-                      +{entry.workout.xpEarned} XP
-                    </span>
-                    {hasPR(entry) && (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20">
-                        🏆 PR
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <span className="text-[11px] text-white/35 shrink-0">{entry.workout.date}</span>
               </div>
 
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                <span className="text-xs text-slate-500">
+              <h3 className="text-sm font-medium text-white mb-1">{entry.workout.title}</h3>
+              <p className="text-xs text-white/45 mb-2">{summarizeExercises(entry)}</p>
+
+              <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-white/45">
+                {entry.workout.duration > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {entry.workout.duration} min
+                  </span>
+                )}
+                <span className="fq-chip-xp">
+                  <Zap className="w-3 h-3" />
+                  +{entry.workout.xpEarned} XP
+                </span>
+                {hasPR(entry) && (
+                  <span className="fq-chip-pr">
+                    <Trophy className="w-3 h-3" />
+                    PR
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-white/[0.06]">
+                <span className="text-[11px] text-white/35">
                   {entry.highFiveCount > 0
                     ? `${entry.highFiveCount} high five${entry.highFiveCount !== 1 ? "s" : ""}`
                     : "Be the first to react"}
@@ -218,100 +326,68 @@ export default function HomeView({
                   <button
                     onClick={() => handleHighFive(entry)}
                     disabled={entry.highFived}
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold touch-target active:scale-95 transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium touch-target active:scale-95 transition-all ${
                       entry.highFived
-                        ? "bg-white/5 text-slate-500"
-                        : "bg-cyan-500/10 text-cyan-300 active:bg-cyan-500/20 border border-cyan-500/20"
+                        ? "bg-white/5 text-white/35"
+                        : "bg-fq-accent/12 text-fq-accent border border-fq-accent/20"
                     }`}
                   >
-                    <span>{entry.highFived ? "✓ Sent" : "👋 High five"}</span>
+                    <Hand className="w-3.5 h-3.5" />
+                    {entry.highFived ? "Sent" : "High five"}
                   </button>
                 )}
               </div>
             </article>
           ))}
         </div>
-      </div>
 
-      <div className="px-4 py-3">
-        <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-cyan-400/10 flex items-center justify-center border border-cyan-400/20 shrink-0">
-              <Shield className="w-6 h-6 text-cyan-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-white">Streak Protection</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {userProfile.streakShields > 0
-                  ? `${userProfile.streakShields} shield${userProfile.streakShields > 1 ? "s" : ""} active`
-                  : "Protect your streak for 500 XP"}
-              </p>
-            </div>
-            {userProfile.streakShields > 0 ? (
-              <div className="px-3 py-2 bg-cyan-500/15 border border-cyan-400/30 rounded-xl text-cyan-200 flex items-center gap-1 shrink-0">
-                <Shield className="w-4 h-4" />
-                <span className="text-sm font-bold">×{userProfile.streakShields}</span>
-              </div>
-            ) : (
+        {/* Active quests preview */}
+        {activeChallenges.length > 0 && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="fq-section-title !mt-4 !mb-0">Active quests</p>
               <button
-                onClick={buyShield}
-                className="px-4 py-2.5 rounded-xl bg-white text-black font-bold text-xs active:bg-cyan-400 shrink-0 touch-target"
+                onClick={() => onNavigateToTab("Goals")}
+                className="text-xs text-fq-accent font-medium -mt-1"
               >
-                Buy
+                See all
               </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-semibold text-slate-400">Active Challenges</h2>
-          <button onClick={() => onNavigateToTab("Goals")} className="text-sm text-cyan-400 font-medium">
-            See all
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {activeChallenges.slice(0, 2).map((chall) => (
-            <button
-              key={chall.id}
-              onClick={() => onNavigateToTab("Goals")}
-              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3 active:border-cyan-500/20 active:bg-zinc-900/80 text-left transition-all"
-            >
-              <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                  chall.completed
-                    ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                    : "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
-                }`}
-              >
-                {chall.type === "Weekly" ? <Dumbbell className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center gap-2">
-                  <h4 className="text-sm font-bold text-white truncate">{chall.title}</h4>
-                  <span className="text-xs font-semibold text-cyan-400 shrink-0">+{chall.xpReward}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex-1 bg-white/5 h-1.5 rounded-full overflow-hidden">
+            </div>
+            <div className="space-y-2">
+              {activeChallenges.slice(0, 2).map((chall) => (
+                <button
+                  key={chall.id}
+                  onClick={() => onNavigateToTab("Goals")}
+                  className="w-full fq-card rounded-2xl p-3.5 text-left active:bg-fq-card-hover transition-colors"
+                >
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                    <p className="text-sm font-medium text-white">{chall.title}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.07] text-white/45 shrink-0">
+                      {chall.type}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-white/40 mb-1.5">
+                    <span>{chall.goalText}</span>
+                    <span>{chall.progress}%</span>
+                  </div>
+                  <div className="fq-progress-bar-bg">
                     <div
-                      className={`h-full rounded-full ${chall.completed ? "bg-emerald-500" : "bg-cyan-500"}`}
+                      className={`fq-progress-bar-fill ${chall.completed ? "done" : ""}`}
                       style={{ width: `${chall.progress}%` }}
                     />
                   </div>
-                  <span className="text-xs text-slate-500 shrink-0">{chall.progress}%</span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+                  <p className="text-xs text-fq-accent font-medium mt-2">+{chall.xpReward} XP</p>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <button
           onClick={() => onNavigateToTab("Log")}
-          className="w-full mt-4 py-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold text-sm active:bg-cyan-500/20 transition-colors"
+          className="fq-btn-primary mt-2"
         >
-          Log a Workout
+          Log a workout
         </button>
       </div>
     </div>

@@ -11,6 +11,7 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   globalRank: 48,
   workoutsCompleted: 48,
   onboardingComplete: true,
+  restDaysLogged: 0,
   playerType: "Explorer",
   octalysisScores: {
     meaning: 50,

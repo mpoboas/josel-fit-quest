@@ -1,5 +1,5 @@
 import { Challenge, BossChallenge } from "../types";
-import { Shield, Trophy, Target, Star, ChevronRight } from "lucide-react";
+import { Shield, Trophy, Star, ChevronRight, Check } from "lucide-react";
 
 interface Props {
   bossChallenge: BossChallenge;
@@ -8,123 +8,113 @@ interface Props {
   onNavigateToTab: (tab: string) => void;
 }
 
-export default function ChallengesView({ bossChallenge, activeChallenges, onCompleteChallenge }: Props) {
+export default function ChallengesView({
+  bossChallenge,
+  activeChallenges,
+  onCompleteChallenge
+}: Props) {
   const bossProgress = Math.round((bossChallenge.workoutsCurrent / bossChallenge.workoutsGoal) * 100);
 
   return (
-    <div className="h-full min-h-0 bg-[#050505] text-slate-100 flex flex-col overflow-y-auto scroll-container">
-      <div className="bg-zinc-900/50 px-4 py-3 flex justify-between items-center border-b border-white/5 safe-top shrink-0">
+    <div className="h-full min-h-0 bg-fq-bg text-[#f0f0f0] flex flex-col overflow-y-auto scroll-container">
+      <header className="flex items-center justify-between px-4 fq-top pb-3 shrink-0">
         <div>
-          <span className="text-xs text-cyan-400 font-semibold">Monthly Event</span>
-          <h2 className="text-base font-bold text-white mt-0.5 font-serif italic">{bossChallenge.title}</h2>
+          <p className="text-[11px] font-medium text-fq-accent uppercase tracking-wider">Monthly event</p>
+          <h1 className="text-[17px] font-medium text-white mt-0.5">{bossChallenge.title}</h1>
         </div>
-        <div className="text-right">
-          <span className="text-sm text-rose-400 font-bold">3 days left</span>
-        </div>
-      </div>
+        <span className="text-xs font-medium text-fq-amber">3 days left</span>
+      </header>
 
-      <div className="p-4 shrink-0">
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="px-4 pb-6 flex-1">
+        {/* Boss challenge */}
+        <div className="fq-card rounded-[18px] p-4 relative overflow-hidden mb-3.5">
+          <div
+            className="absolute top-0 left-0 right-0 h-[3px]"
+            style={{ background: "linear-gradient(90deg, #7ee8a2, #3db87a)" }}
+          />
+          <p className="text-[10px] font-medium text-fq-accent uppercase tracking-widest mb-1">
+            Boss challenge
+          </p>
+          <h2 className="text-lg font-medium text-white mb-1.5">Slay the Gauntlet</h2>
+          <p className="text-xs text-white/50 leading-relaxed mb-3">{bossChallenge.description}</p>
 
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <span className="text-xs text-cyan-400 font-bold uppercase tracking-wider">Boss Challenge</span>
-              <h3 className="text-lg font-extrabold text-white mt-1 font-serif italic">Slay the Gauntlet</h3>
-            </div>
-            <span className="text-2xl">👹</span>
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="text-white/45">Progress</span>
+            <span className="text-fq-accent font-medium">
+              {bossChallenge.workoutsCurrent} / {bossChallenge.workoutsGoal} ({bossProgress}%)
+            </span>
           </div>
-
-          <p className="text-sm text-slate-400 leading-relaxed mb-4">{bossChallenge.description}</p>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Progress</span>
-              <span className="text-cyan-400 font-bold">
-                {bossChallenge.workoutsCurrent}/{bossChallenge.workoutsGoal} ({bossProgress}%)
-              </span>
-            </div>
-            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${bossProgress}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mt-5">
-            <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3 text-center">
-              <Star className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
-              <span className="text-xs font-bold text-cyan-300">+{bossChallenge.xpReward} XP</span>
-            </div>
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
-              <Shield className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-              <span className="text-xs font-bold text-blue-300">+{bossChallenge.shieldReward} Shield</span>
-            </div>
-            <div className="bg-zinc-800/50 border border-white/5 rounded-xl p-3 text-center">
-              <Trophy className="w-4 h-4 text-amber-500 mx-auto mb-1" />
-              <span className="text-xs font-bold text-zinc-300">Elite Badge</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 px-4 pb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-semibold text-slate-400">Active Quests</h3>
-          <Target className="w-4 h-4 text-slate-600" />
-        </div>
-
-        <div className="space-y-3">
-          {activeChallenges.map((chall) => (
+          <div className="h-[7px] bg-white/[0.08] rounded-md overflow-hidden mb-2">
             <div
-              key={chall.id}
-              className={`bg-zinc-900/50 border rounded-2xl p-4 ${
-                chall.completed ? "border-emerald-500/25 bg-emerald-500/[0.02]" : "border-white/5"
+              className="h-full bg-fq-accent rounded-md transition-all duration-500"
+              style={{ width: `${bossProgress}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between text-xs mb-3">
+            <span className="text-white/45">Personal records</span>
+            <span
+              className={`font-medium ${
+                bossChallenge.prCurrentCount >= bossChallenge.prGoalCount
+                  ? "text-fq-accent-dark"
+                  : "text-fq-amber"
               }`}
             >
-              <div className="flex justify-between items-start gap-2 mb-2">
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                    {chall.title}
-                    {chall.completed && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">
-                        Done
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{chall.description}</p>
-                </div>
-                <span
-                  className={`text-[10px] px-2 py-1 rounded-full border shrink-0 ${
-                    chall.type === "Group"
-                      ? "bg-cyan-950/40 text-cyan-300 border-cyan-500/20"
-                      : "bg-white/5 text-slate-400 border-white/5"
-                  }`}
-                >
+              {bossChallenge.prCurrentCount} / {bossChallenge.prGoalCount}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            <div className="bg-white/[0.05] border border-white/[0.08] rounded-[10px] py-2 px-1.5 text-center">
+              <Star className="w-4 h-4 text-fq-accent mx-auto mb-1" />
+              <span className="text-[11px] font-medium text-white/70">+{bossChallenge.xpReward} XP</span>
+            </div>
+            <div className="bg-white/[0.05] border border-white/[0.08] rounded-[10px] py-2 px-1.5 text-center">
+              <Shield className="w-4 h-4 text-fq-accent mx-auto mb-1" />
+              <span className="text-[11px] font-medium text-white/70">+{bossChallenge.shieldReward} Shield</span>
+            </div>
+            <div className="bg-white/[0.05] border border-white/[0.08] rounded-[10px] py-2 px-1.5 text-center">
+              <Trophy className="w-4 h-4 text-fq-amber mx-auto mb-1" />
+              <span className="text-[11px] font-medium text-white/70">Elite badge</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="fq-section-title">Active quests</p>
+
+        <div className="space-y-2">
+          {activeChallenges.map((chall) => (
+            <div key={chall.id} className="fq-card rounded-2xl p-3.5">
+              <div className="flex justify-between items-start gap-2 mb-1">
+                <p className="text-sm font-medium text-white">{chall.title}</p>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.07] text-white/45 shrink-0">
                   {chall.type}
                 </span>
               </div>
+              <p className="text-xs text-white/45 leading-relaxed mb-2.5">{chall.description}</p>
 
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                  <span>{chall.goalText}</span>
-                  <span>{chall.progress}%</span>
-                </div>
-                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${chall.completed ? "bg-emerald-500" : "bg-cyan-400"}`}
-                    style={{ width: `${chall.progress}%` }}
-                  />
-                </div>
+              <div className="flex justify-between text-[11px] text-white/40 mb-1.5">
+                <span>{chall.goalText}</span>
+                <span>{chall.progress}%</span>
+              </div>
+              <div className="fq-progress-bar-bg mb-2.5">
+                <div
+                  className={`fq-progress-bar-fill ${chall.completed ? "done" : ""}`}
+                  style={{ width: `${chall.progress}%` }}
+                />
               </div>
 
-              <div className="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
-                <span className="text-xs text-cyan-400 font-semibold">+{chall.xpReward} XP</span>
-                {!chall.completed && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-fq-accent">+{chall.xpReward} XP</span>
+                {chall.completed ? (
+                  <span className="inline-flex items-center gap-1 bg-fq-accent-dark/12 text-fq-accent-dark border border-fq-accent-dark/20 px-2 py-1 rounded-[10px] text-[11px] font-medium">
+                    <Check className="w-3 h-3" />
+                    Done
+                  </span>
+                ) : (
                   <button
                     onClick={() => onCompleteChallenge(chall.id)}
-                    className="text-xs text-slate-400 active:text-white flex items-center gap-1 touch-target"
+                    className="inline-flex items-center gap-1 text-xs text-white/45 active:text-white touch-target"
                   >
                     Mark complete
                     <ChevronRight className="w-3.5 h-3.5" />
