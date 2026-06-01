@@ -1,6 +1,6 @@
 export interface Set {
   id: string;
-  weight: number; // in kg
+  weight: number;
   reps: number;
   isPR?: boolean;
 }
@@ -8,16 +8,16 @@ export interface Set {
 export interface Exercise {
   id: string;
   name: string;
-  category: string; // "Chest" | "Back" | "Legs" | "Shoulders" | "Arms" | "Cardio" | "Core"
+  category: string;
   sets: Set[];
 }
 
 export interface Workout {
   id: string;
   title: string;
-  date: string; // readable e.g. "Thursday, 29 May"
-  rawDate: string; // ISO format
-  duration: number; // in minutes
+  date: string;
+  rawDate: string;
+  duration: number;
   exercises: Exercise[];
   xpEarned: number;
 }
@@ -26,12 +26,23 @@ export interface SocialWorkout {
   id: string;
   authorName: string;
   authorAvatar: string;
-  authorTier: LeaderboardEntry["tier"];
+  authorTier: RankTier;
   isMe?: boolean;
   workout: Workout;
   highFived?: boolean;
   highFiveCount: number;
 }
+
+export type RankTier = "Bronze" | "Silver" | "Gold" | "Platinum" | "Elite";
+
+export type PlayerType = "Achiever" | "Explorer" | "Socialiser" | "Killer" | "Undecided";
+
+export type ChallengeTrackId =
+  | "weekly_prs"
+  | "weekly_cardio"
+  | "daily_compounds"
+  | "group_leg"
+  | "weekly_xp_lead";
 
 export interface BossChallenge {
   title: string;
@@ -51,10 +62,14 @@ export interface Challenge {
   title: string;
   description: string;
   type: "Daily" | "Weekly" | "Group";
-  progress: number; // 0 to 100
+  progress: number;
   goalText: string;
   xpReward: number;
   completed: boolean;
+  trackId?: ChallengeTrackId;
+  squadGoal?: number;
+  squadCurrent?: number;
+  audience?: PlayerType[];
 }
 
 export interface LeaderboardEntry {
@@ -62,18 +77,54 @@ export interface LeaderboardEntry {
   name: string;
   avatar: string;
   xp: number;
-  tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Elite";
+  weeklyXp?: number;
+  tier: RankTier;
   isMe?: boolean;
   highFived?: boolean;
+  topPerformerThisWeek?: boolean;
+}
+
+export interface CategoryLeader {
+  exercise: string;
+  name: string;
+  avatar: string;
+  value: number;
+  unit: string;
+  isMe?: boolean;
 }
 
 export interface Badge {
   id: string;
   name: string;
   description: string;
-  icon: string; // lucide class or emoji representation
+  icon: string;
   type: "gold" | "blue" | "green" | "gray";
+  category: "performance" | "routine" | "social" | "milestone" | "mentorship";
   unlockedAt?: string;
+  animated?: boolean;
+}
+
+export interface WorkoutRecommendation {
+  id: string;
+  title: string;
+  reason: string;
+  suggestedExercises: string[];
+  createdAt: string;
+  actedOn?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  type: "high_five" | "rank_up" | "badge" | "streak_risk" | "bonus_xp" | "season" | "follow";
+  message: string;
+  createdAt: string;
+  read?: boolean;
+}
+
+export interface BehavioralEvent {
+  ts: string;
+  event: string;
+  meta?: Record<string, string | number>;
 }
 
 export interface UserProfile {
@@ -81,14 +132,16 @@ export interface UserProfile {
   level: number;
   xp: number;
   xpToNextLevel: number;
-  rank: "Bronze" | "Silver" | "Gold" | "Platinum" | "Elite";
+  rank: RankTier;
   streak: number;
   streakShields: number;
   globalRank: number;
   workoutsCompleted: number;
   onboardingComplete: boolean;
+  onboardingPhase: "survey" | "octalysis" | "done";
   restDaysLogged: number;
-  playerType: "Achiever" | "Explorer" | "Socialiser" | "Killer" | "Undecided";
+  playerType: PlayerType;
+  fitnessGoal?: "strength" | "cardio" | "balance";
   octalysisScores: {
     meaning: number;
     accomplishment: number;
@@ -99,4 +152,51 @@ export interface UserProfile {
     curiosity: number;
     avoidance: number;
   };
+  octalysisLastTaken?: string;
+  following: string[];
+  highFivesSent: number;
+  highFivesReceived: number;
+  day7ShieldAwarded: boolean;
+  lastWorkoutDate?: string;
+  lastSeasonResetAt?: string;
+  lastWeeklyResetAt?: string;
+  registeredAt: string;
+  unlockedCosmetics: string[];
+  dismissedMilestones: string[];
+  lastStreakWarningDate?: string;
+}
+
+export interface GamificationState {
+  profile: UserProfile;
+  workouts: Workout[];
+  challenges: Challenge[];
+  boss: BossChallenge;
+  badges: Badge[];
+  friendsLb: LeaderboardEntry[];
+  globalLb: LeaderboardEntry[];
+  socialFeed: SocialWorkout[];
+  recommendations: WorkoutRecommendation[];
+  notifications: AppNotification[];
+  analytics: BehavioralEvent[];
+}
+
+export interface RankUpResult {
+  newRank: RankTier;
+  previousRank: RankTier;
+  leveledUp: boolean;
+  newLevel: number;
+}
+
+export interface WorkoutFinishResult {
+  profile: UserProfile;
+  boss: BossChallenge;
+  challenges: Challenge[];
+  badges: Badge[];
+  friendsLb: LeaderboardEntry[];
+  feed: SocialWorkout[];
+  notifications: AppNotification[];
+  bonusXp: number;
+  rankUp?: RankUpResult;
+  newlyCompletedChallengeIds: string[];
+  milestoneKey?: string;
 }

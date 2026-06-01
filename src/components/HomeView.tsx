@@ -1,4 +1,4 @@
-import { UserProfile, Challenge, SocialWorkout, Workout } from "../types";
+import { UserProfile, Challenge, SocialWorkout, Workout, AppNotification, WorkoutRecommendation } from "../types";
 import {
   Award,
   Clock,
@@ -7,21 +7,30 @@ import {
   Shield,
   Heart,
   AlertTriangle,
-  Hand
+  Hand,
+  Sparkles,
+  Bell,
+  Lock
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { daysUntilSeasonReset, TIER_ORDER } from "../gamification";
 
 interface Props {
   userProfile: UserProfile;
   workoutHistory: Workout[];
   activeChallenges: Challenge[];
   socialFeed: SocialWorkout[];
+  recommendations: WorkoutRecommendation[];
+  notifications: AppNotification[];
   homeToast?: string | null;
+  leaderboardUnlocked: boolean;
   onChangeUserProfile: (profile: Partial<UserProfile>) => void;
   onNavigateToTab: (tab: string) => void;
   onHighFiveFeed: (id: string) => void;
   onLogRestDay: () => void;
   onClearHomeToast?: () => void;
+  onActOnRecommendation: (id: string) => void;
+  onDismissNotification: (id: string) => void;
 }
 
 function getGreeting() {
@@ -42,20 +51,22 @@ function hasPR(entry: SocialWorkout) {
   return entry.workout.exercises.some((e) => e.sets.some((s) => s.isPR));
 }
 
-const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum", "Elite"];
-const SEASON_END = new Date("2026-07-01T00:00:00.000Z");
-
 export default function HomeView({
   userProfile,
   workoutHistory,
   activeChallenges,
   socialFeed,
+  recommendations,
+  notifications,
   homeToast,
+  leaderboardUnlocked,
   onChangeUserProfile,
   onNavigateToTab,
   onHighFiveFeed,
   onLogRestDay,
-  onClearHomeToast
+  onClearHomeToast,
+  onActOnRecommendation,
+  onDismissNotification
 }: Props) {
   const [notification, setNotification] = useState<string | null>(null);
   const [wellbeingDismissed, setWellbeingDismissed] = useState(false);
@@ -81,8 +92,10 @@ export default function HomeView({
     return realWorkouts.every((w) => !w.exercises.some((e) => e.sets.some((s) => s.isPR)));
   }, [userProfile.streak, workoutHistory, wellbeingDismissed]);
 
-  const daysUntilReset = Math.ceil((SEASON_END.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  const showRankAlert = daysUntilReset >= 0 && daysUntilReset <= 7;
+  const daysUntilReset = daysUntilSeasonReset(userProfile);
+  const showRankAlert = daysUntilReset >= 0 && daysUntilReset <= 14;
+  const unreadNotifications = notifications.filter((n) => !n.read).slice(0, 3);
+  const dailyChallenge = activeChallenges.find((c) => c.type === "Daily" && !c.completed);
   const currentTierIdx = TIER_ORDER.indexOf(userProfile.rank);
   const demotionTier = currentTierIdx > 0 ? TIER_ORDER[currentTierIdx - 1] : userProfile.rank;
 
@@ -190,6 +203,71 @@ export default function HomeView({
           </button>
         </div>
 
+        {!leaderboardUnlocked && (
+          <div className="fq-card rounded-2xl p-3.5 flex items-start gap-2.5 border-fq-blue/20">
+            <Lock className="w-4 h-4 text-fq-blue shrink-0 mt-0.5" />
+            <p className="text-xs text-white/45 leading-relaxed">
+              Complete your first workout to unlock the Friends leaderboard and social feed rankings.
+            </p>
+          </div>
+        )}
+
+        {unreadNotifications.length > 0 && (
+          <div className="space-y-1.5">
+            {unreadNotifications.map((n) => (
+              <div
+                key={n.id}
+                className="fq-card rounded-xl px-3 py-2.5 flex items-start gap-2 border-fq-accent/15"
+              >
+                <Bell className="w-3.5 h-3.5 text-fq-accent shrink-0 mt-0.5" />
+                <p className="text-xs text-white/55 flex-1">{n.message}</p>
+                <button
+                  onClick={() => onDismissNotification(n.id)}
+                  className="text-[10px] text-white/35 shrink-0"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {dailyChallenge && (
+          <button
+            onClick={() => onNavigateToTab("Goals")}
+            className="w-full fq-card rounded-2xl p-3.5 text-left active:bg-fq-card-hover"
+          >
+            <p className="text-[10px] text-fq-accent uppercase tracking-wider mb-1">Daily quest</p>
+            <p className="text-sm font-medium text-white">{dailyChallenge.title}</p>
+            <p className="text-xs text-white/45 mt-1">{dailyChallenge.goalText} · +100 XP on complete</p>
+          </button>
+        )}
+
+        {recommendations.filter((r) => !r.actedOn).length > 0 && (
+          <>
+            <p className="fq-section-title !mt-2">For you</p>
+            {recommendations
+              .filter((r) => !r.actedOn)
+              .map((rec) => (
+                <div key={rec.id} className="fq-card rounded-2xl p-3.5 mb-2">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-fq-amber shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{rec.title}</p>
+                      <p className="text-xs text-white/45 mt-1">{rec.reason}</p>
+                      <button
+                        onClick={() => onActOnRecommendation(rec.id)}
+                        className="mt-2 text-xs text-fq-accent font-medium"
+                      >
+                        Log recommended session →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </>
+        )}
+
         {showRankAlert && (
           <div className="fq-card rounded-2xl p-3.5 flex items-start gap-2.5 border-rose-500/20 bg-rose-500/5">
             <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -271,15 +349,16 @@ export default function HomeView({
         <div className="flex items-center justify-between">
           <p className="fq-section-title !mt-4 !mb-0">Friend activity</p>
           <button
-            onClick={() => onNavigateToTab("Rank")}
-            className="text-xs text-fq-accent font-medium -mt-1"
+            onClick={() => leaderboardUnlocked && onNavigateToTab("Rank")}
+            disabled={!leaderboardUnlocked}
+            className={`text-xs font-medium -mt-1 ${leaderboardUnlocked ? "text-fq-accent" : "text-white/25"}`}
           >
             Leaderboard
           </button>
         </div>
 
         <div className="space-y-2">
-          {socialFeed.map((entry) => (
+          {(leaderboardUnlocked ? socialFeed : socialFeed.filter((e) => e.isMe)).map((entry) => (
             <article key={entry.id} className="fq-card rounded-2xl p-3.5">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">

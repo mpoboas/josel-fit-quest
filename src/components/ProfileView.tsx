@@ -1,15 +1,33 @@
 import { useState, useMemo } from "react";
-import { UserProfile, Workout, Badge } from "../types";
-import { Flame, Trophy, Activity, Award, Settings, Dumbbell, RotateCcw, ChevronRight } from "lucide-react";
+import { UserProfile, Workout, Badge, LeaderboardEntry } from "../types";
+import {
+  Flame,
+  Trophy,
+  Activity,
+  Award,
+  Settings,
+  Dumbbell,
+  RotateCcw,
+  ChevronRight,
+  Hand,
+  Lock,
+  UserPlus,
+  Download
+} from "lucide-react";
+import { ANALYTICS_UNLOCK_SESSIONS, needsQuarterlyOctalysis } from "../gamification";
 
 interface Props {
   userProfile: UserProfile;
   workoutHistory: Workout[];
   badges: Badge[];
+  analyticsUnlocked: boolean;
+  analyticsEventCount: number;
+  friendsLeaderboard: LeaderboardEntry[];
   onChangeUserProfile: (profile: Partial<UserProfile>) => void;
   onNavigateToTab: (tab: string) => void;
   onOpenDrivesQuiz: () => void;
   onResetApp: () => void;
+  onToggleFollow: (name: string) => void;
 }
 
 function formatDriveLabel(key: string) {
@@ -20,23 +38,43 @@ export default function ProfileView({
   userProfile,
   workoutHistory,
   badges,
+  analyticsUnlocked,
+  analyticsEventCount,
+  friendsLeaderboard,
   onOpenDrivesQuiz,
-  onResetApp
+  onResetApp,
+  onToggleFollow
 }: Props) {
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   const computedStats = useMemo(() => {
     let totalKgsLifted = 0;
+    const distribution: Record<string, number> = {};
+    const strengthTrend: { label: string; maxWeight: number }[] = [];
+
     workoutHistory.forEach((wk) => {
       wk.exercises.forEach((ex) => {
+        distribution[ex.category] = (distribution[ex.category] || 0) + 1;
+        let maxW = 0;
         ex.sets.forEach((set) => {
           totalKgsLifted += (set.weight || 0) * (set.reps || 0);
+          if ((set.weight || 0) > maxW) maxW = set.weight || 0;
         });
+        if (ex.category !== "Cardio" && maxW > 0) {
+          strengthTrend.push({ label: ex.name.slice(0, 8), maxWeight: maxW });
+        }
       });
     });
-    return { totalKgsLifted };
+
+    const topTrend = strengthTrend.slice(-6);
+    return { totalKgsLifted, distribution, topTrend };
   }, [workoutHistory]);
+
+  const distMax = Math.max(...(Object.values(computedStats.distribution) as number[]), 1);
+  const trendMax = Math.max(...computedStats.topTrend.map((t) => t.maxWeight), 1);
+
+  const friends = friendsLeaderboard.filter((f) => !f.isMe);
 
   const weeklyVolume = useMemo(() => {
     function getWeekMonday(date: Date): Date {
@@ -109,6 +147,8 @@ export default function ProfileView({
         return <Trophy className="w-5 h-5" />;
       case "Users":
         return <span className="text-base">👥</span>;
+      case "Hand":
+        return <Hand className="w-5 h-5" />;
       default:
         return <span className="text-sm">🔒</span>;
     }
@@ -142,6 +182,11 @@ export default function ProfileView({
           <span className="mt-2 px-3 py-1 rounded-xl bg-white/[0.07] text-xs text-white/55">
             {userProfile.playerType} player
           </span>
+          {userProfile.unlockedCosmetics.length > 0 && (
+            <p className="text-[10px] text-fq-accent mt-2">
+              Cosmetics: {userProfile.unlockedCosmetics.join(", ").replace(/_/g, " ")}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-3.5">
@@ -159,12 +204,37 @@ export default function ProfileView({
           </div>
         </div>
 
-        {/* Motivation profile */}
+        <p className="fq-section-title !mt-0">Following</p>
+        <div className="fq-card rounded-2xl p-3.5 mb-3.5 space-y-2">
+          {friends.map((f) => {
+            const following = userProfile.following.includes(f.name);
+            return (
+              <div key={f.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="fq-avatar text-[10px]">{f.avatar}</div>
+                  <span className="text-sm text-white">{f.name}</span>
+                </div>
+                <button
+                  onClick={() => onToggleFollow(f.name)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
+                    following
+                      ? "border-fq-accent/30 text-fq-accent bg-fq-accent/10"
+                      : "border-white/10 text-white/45"
+                  }`}
+                >
+                  <UserPlus className="w-3 h-3" />
+                  {following ? "Following" : "Follow"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="fq-card rounded-2xl p-3.5 mb-3.5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-white">Motivation profile</p>
             <button onClick={onOpenDrivesQuiz} className="text-xs text-fq-accent font-medium active:opacity-80">
-              Retake quiz
+              {needsQuarterlyOctalysis(userProfile) ? "Quarterly quiz due" : "Retake quiz"}
             </button>
           </div>
           {topDrives.map(([key, value]) => (
@@ -189,10 +259,10 @@ export default function ProfileView({
                 onClick={() => setSelectedBadge(badge)}
                 className={`fq-card rounded-[14px] p-3 text-center active:scale-[0.97] transition-transform ${
                   !isUnlocked ? "opacity-40" : ""
-                }`}
+                } ${badge.animated && isUnlocked ? "ring-1 ring-fq-amber/30" : ""}`}
               >
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-1.5 ${badgeIconClass(badge, isUnlocked)}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-1.5 ${badgeIconClass(badge, isUnlocked)} ${badge.animated && isUnlocked ? "animate-pulse" : ""}`}
                 >
                   {renderBadgeIcon(badge)}
                 </div>
@@ -202,32 +272,86 @@ export default function ProfileView({
           })}
         </div>
 
-        {/* Volume progress */}
-        <p className="fq-section-title !mt-0">Volume progress</p>
-        <div className="fq-card rounded-2xl p-3.5">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-xs text-white/45">Weekly total (kg)</span>
-            <span className="text-sm font-medium text-fq-accent">
-              {computedStats.totalKgsLifted.toLocaleString()} kg
-            </span>
+        <p className="fq-section-title !mt-0">Analytics dashboard</p>
+        {!analyticsUnlocked ? (
+          <div className="fq-card rounded-2xl p-4 flex items-start gap-3 mb-3.5">
+            <Lock className="w-5 h-5 text-white/35 shrink-0" />
+            <p className="text-xs text-white/45 leading-relaxed">
+              Log {ANALYTICS_UNLOCK_SESSIONS} sessions to unlock volume curves, strength growth, and
+              distribution charts ({workoutHistory.filter((w) => w.exercises.length > 0).length}/
+              {ANALYTICS_UNLOCK_SESSIONS}).
+            </p>
           </div>
-          <div className="flex items-end gap-2 h-24">
-            {weeklyVolume.map((w) => {
-              const heightPct = Math.max(12, Math.min(100, (w.volume / maxVolumeVal) * 100));
-              return (
-                <div key={w.label} className="flex-1 flex flex-col items-center gap-1.5">
-                  <div
-                    className={`w-full rounded-t-md transition-all ${
-                      w.isCurrent ? "bg-fq-accent" : "bg-white/[0.07]"
-                    }`}
-                    style={{ height: `${heightPct}px` }}
-                  />
-                  <span className="text-[10px] text-white/40">{w.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="fq-card rounded-2xl p-3.5 mb-3">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs text-white/45">Weekly volume (kg)</span>
+                <button
+                  type="button"
+                  onClick={() => alert("Weekly summary exported (demo CSV).")}
+                  className="text-[10px] text-fq-accent flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" />
+                  Export
+                </button>
+              </div>
+              <div className="flex items-end gap-2 h-24">
+                {weeklyVolume.map((w) => {
+                  const heightPct = Math.max(12, Math.min(100, (w.volume / maxVolumeVal) * 100));
+                  return (
+                    <div key={w.label} className="flex-1 flex flex-col items-center gap-1.5">
+                      <div
+                        className={`w-full rounded-t-md ${w.isCurrent ? "bg-fq-accent" : "bg-white/[0.07]"}`}
+                        style={{ height: `${heightPct}px` }}
+                      />
+                      <span className="text-[10px] text-white/40">{w.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="fq-card rounded-2xl p-3.5 mb-3">
+              <p className="text-xs text-white/45 mb-3">Strength growth (max weight)</p>
+              <div className="flex items-end gap-1.5 h-20">
+                {computedStats.topTrend.map((t) => (
+                  <div key={t.label} className="flex-1 flex flex-col items-center gap-1">
+                    <div
+                      className="w-full bg-fq-blue/60 rounded-t-sm"
+                      style={{ height: `${Math.max(8, (t.maxWeight / trendMax) * 72)}px` }}
+                    />
+                    <span className="text-[8px] text-white/35 truncate w-full text-center">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="fq-card rounded-2xl p-3.5 mb-3">
+              <p className="text-xs text-white/45 mb-3">Workout distribution</p>
+              <div className="space-y-2">
+                {Object.entries(computedStats.distribution).map(([cat, count]: [string, number]) => (
+                  <div key={cat}>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-white/55">{cat}</span>
+                      <span className="text-white/35">{count}</span>
+                    </div>
+                    <div className="fq-progress-bar-bg">
+                      <div
+                        className="fq-progress-bar-fill"
+                        style={{ width: `${(count / distMax) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[10px] text-white/30 text-center mb-4">
+              Behavioural events tracked: {analyticsEventCount}
+            </p>
+          </>
+        )}
       </div>
 
       {selectedBadge && (

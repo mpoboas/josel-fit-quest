@@ -1,18 +1,13 @@
-import { Challenge, BossChallenge } from "../types";
-import { Shield, Trophy, Star, ChevronRight, Check } from "lucide-react";
+import { Challenge, BossChallenge, PlayerType } from "../types";
+import { Shield, Trophy, Star, Check } from "lucide-react";
 
 interface Props {
   bossChallenge: BossChallenge;
   activeChallenges: Challenge[];
-  onCompleteChallenge: (id: string) => void;
-  onNavigateToTab: (tab: string) => void;
+  playerType: PlayerType;
 }
 
-export default function ChallengesView({
-  bossChallenge,
-  activeChallenges,
-  onCompleteChallenge
-}: Props) {
+export default function ChallengesView({ bossChallenge, activeChallenges, playerType }: Props) {
   const bossProgress = Math.round((bossChallenge.workoutsCurrent / bossChallenge.workoutsGoal) * 100);
 
   return (
@@ -26,7 +21,10 @@ export default function ChallengesView({
       </header>
 
       <div className="px-4 pb-6 flex-1">
-        {/* Boss challenge */}
+        <p className="text-[11px] text-white/40 mb-3">
+          Quest order personalised for <span className="text-fq-accent">{playerType}</span> players
+        </p>
+
         <div className="fq-card rounded-[18px] p-4 relative overflow-hidden mb-3.5">
           <div
             className="absolute top-0 left-0 right-0 h-[3px]"
@@ -39,27 +37,18 @@ export default function ChallengesView({
           <p className="text-xs text-white/50 leading-relaxed mb-3">{bossChallenge.description}</p>
 
           <div className="flex justify-between text-xs mb-1.5">
-            <span className="text-white/45">Progress</span>
+            <span className="text-white/45">Workouts</span>
             <span className="text-fq-accent font-medium">
               {bossChallenge.workoutsCurrent} / {bossChallenge.workoutsGoal} ({bossProgress}%)
             </span>
           </div>
           <div className="h-[7px] bg-white/[0.08] rounded-md overflow-hidden mb-2">
-            <div
-              className="h-full bg-fq-accent rounded-md transition-all duration-500"
-              style={{ width: `${bossProgress}%` }}
-            />
+            <div className="h-full bg-fq-accent rounded-md transition-all" style={{ width: `${bossProgress}%` }} />
           </div>
 
           <div className="flex justify-between text-xs mb-3">
             <span className="text-white/45">Personal records</span>
-            <span
-              className={`font-medium ${
-                bossChallenge.prCurrentCount >= bossChallenge.prGoalCount
-                  ? "text-fq-accent-dark"
-                  : "text-fq-amber"
-              }`}
-            >
+            <span className="text-fq-accent font-medium">
               {bossChallenge.prCurrentCount} / {bossChallenge.prGoalCount}
             </span>
           </div>
@@ -81,6 +70,7 @@ export default function ChallengesView({
         </div>
 
         <p className="fq-section-title">Active quests</p>
+        <p className="text-[11px] text-white/35 -mt-2 mb-2">Progress updates automatically from your logs</p>
 
         <div className="space-y-2">
           {activeChallenges.map((chall) => (
@@ -92,6 +82,12 @@ export default function ChallengesView({
                 </span>
               </div>
               <p className="text-xs text-white/45 leading-relaxed mb-2.5">{chall.description}</p>
+
+              {chall.type === "Group" && chall.squadGoal && (
+                <p className="text-[11px] text-fq-blue mb-2">
+                  Squad progress: {chall.squadCurrent ?? 0} / {chall.squadGoal} combined leg sets
+                </p>
+              )}
 
               <div className="flex justify-between text-[11px] text-white/40 mb-1.5">
                 <span>{chall.goalText}</span>
@@ -105,20 +101,17 @@ export default function ChallengesView({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-fq-accent">+{chall.xpReward} XP</span>
+                <span className="text-xs font-medium text-fq-accent">
+                  +{chall.xpReward} XP
+                  {chall.type === "Daily" && !chall.completed && " (+100 on complete)"}
+                </span>
                 {chall.completed ? (
                   <span className="inline-flex items-center gap-1 bg-fq-accent-dark/12 text-fq-accent-dark border border-fq-accent-dark/20 px-2 py-1 rounded-[10px] text-[11px] font-medium">
                     <Check className="w-3 h-3" />
                     Done
                   </span>
                 ) : (
-                  <button
-                    onClick={() => onCompleteChallenge(chall.id)}
-                    className="inline-flex items-center gap-1 text-xs text-white/45 active:text-white touch-target"
-                  >
-                    Mark complete
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <span className="text-[10px] text-white/35">Auto-tracked</span>
                 )}
               </div>
             </div>

@@ -6,9 +6,10 @@ interface Props {
   userProfile: UserProfile;
   onUpdateScores: (scores: UserProfile["octalysisScores"]) => void;
   onClose: () => void;
+  required?: boolean;
 }
 
-export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose }: Props) {
+export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose, required }: Props) {
   const [scores, setScores] = useState({ ...userProfile.octalysisScores });
   const [activeQuestion, setActiveQuestion] = useState(0);
 
@@ -81,9 +82,11 @@ export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose }
     <div className="fixed inset-0 bg-fq-bg/95 backdrop-blur-md z-40 flex flex-col fq-top safe-bottom safe-x">
       <div className="flex justify-between items-center px-4 py-3 border-b border-white/[0.06] shrink-0">
         <span className="text-sm font-medium text-white">Motivation quiz</span>
-        <button onClick={onClose} className="p-2 rounded-xl active:bg-white/5 touch-target" aria-label="Close">
-          <X className="w-5 h-5 text-white/45" />
-        </button>
+        {!required && (
+          <button onClick={onClose} className="p-2 rounded-xl active:bg-white/5 touch-target" aria-label="Close">
+            <X className="w-5 h-5 text-white/45" />
+          </button>
+        )}
       </div>
 
       <div className="px-3.5 py-3 shrink-0">
@@ -123,13 +126,19 @@ export default function MainQuizOverlay({ userProfile, onUpdateScores, onClose }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-3.5 border-t border-white/[0.06] shrink-0 safe-bottom">
-        <button
-          onClick={onClose}
-          className="py-3.5 rounded-2xl border border-white/10 text-white/45 text-sm font-medium active:bg-white/5"
-        >
-          Cancel
-        </button>
+      <div
+        className={`gap-3 p-3.5 border-t border-white/[0.06] shrink-0 safe-bottom ${
+          required ? "grid grid-cols-1" : "grid grid-cols-2"
+        }`}
+      >
+        {!required && (
+          <button
+            onClick={onClose}
+            className="py-3.5 rounded-2xl border border-white/10 text-white/45 text-sm font-medium active:bg-white/5"
+          >
+            Cancel
+          </button>
+        )}
         <button
           onClick={handleNext}
           className="py-3.5 rounded-2xl bg-fq-accent text-fq-bg text-sm font-medium active:opacity-90 flex items-center justify-center gap-1.5"

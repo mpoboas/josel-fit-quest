@@ -109,9 +109,10 @@ export default function OnboardingSurvey({ onComplete }: Props) {
       setStep(step + 1);
     } else {
       const finalPlayerType = (updatedAnswers["q_interest"] as UserProfile["playerType"]) || "Explorer";
+      const fitnessGoal = updatedAnswers["q_priority"] as UserProfile["fitnessGoal"];
       onComplete({
         playerType: finalPlayerType,
-        onboardingComplete: true,
+        fitnessGoal,
         octalysisScores: newScores
       });
     }

@@ -11,8 +11,10 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   globalRank: 48,
   workoutsCompleted: 48,
   onboardingComplete: true,
+  onboardingPhase: "done",
   restDaysLogged: 0,
   playerType: "Explorer",
+  fitnessGoal: "balance",
   octalysisScores: {
     meaning: 50,
     accomplishment: 80,
@@ -22,54 +24,121 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
     scarcity: 55,
     curiosity: 60,
     avoidance: 70
-  }
+  },
+  octalysisLastTaken: "2026-05-01T00:00:00.000Z",
+  following: ["Ana S.", "João R.", "Tiago F."],
+  highFivesSent: 12,
+  highFivesReceived: 8,
+  day7ShieldAwarded: true,
+  registeredAt: "2026-03-01T00:00:00.000Z",
+  unlockedCosmetics: ["frame_silver"],
+  dismissedMilestones: []
 };
 
 export const INITIAL_BADGES: Badge[] = [
   {
-    id: "streak_14",
-    name: "14-day streak",
-    description: "Maintained a consecutive workout behavior for 14 straight days. True discipline!",
+    id: "first_log",
+    name: "First log",
+    description: "Logged your very first workout in FitQuest.",
+    icon: "Dumbbell",
+    type: "green",
+    category: "milestone",
+    unlockedAt: "2026-03-02"
+  },
+  {
+    id: "streak_7",
+    name: "7-day streak",
+    description: "One full week of consistent training.",
     icon: "Flame",
     type: "gold",
+    category: "milestone",
+    unlockedAt: "2026-03-10"
+  },
+  {
+    id: "streak_14",
+    name: "14-day streak",
+    description: "Maintained a consecutive workout behavior for 14 straight days.",
+    icon: "Flame",
+    type: "gold",
+    category: "milestone",
     unlockedAt: "2026-05-20"
   },
   {
     id: "pr_hunter",
     name: "PR hunter",
-    description: "Shattered pre-existing limitations by logging a brand new Personal Record.",
+    description: "Logged a brand new personal record.",
     icon: "Barbell",
     type: "blue",
+    category: "performance",
     unlockedAt: "2026-05-25"
   },
   {
     id: "cardio_start",
     name: "Cardio start",
-    description: "Balanced strength conditioning splits with high-impact cardiovascular endurance logs.",
+    description: "Balanced strength with cardiovascular endurance.",
     icon: "Activity",
     type: "green",
+    category: "routine",
     unlockedAt: "2026-05-27"
+  },
+  {
+    id: "top_performer",
+    name: "Top performer",
+    description: "Finished #1 on the weekly friends sprint.",
+    icon: "Trophy",
+    type: "gold",
+    category: "social",
+    animated: true
+  },
+  {
+    id: "high_five_10",
+    name: "Encourager",
+    description: "Sent 10 high fives to friends.",
+    icon: "Hand",
+    type: "blue",
+    category: "social"
+  },
+  {
+    id: "mentor",
+    name: "Mentor",
+    description: "Supported beginners through consistent high fives and follows.",
+    icon: "Users",
+    type: "green",
+    category: "mentorship"
   },
   {
     id: "streak_30",
     name: "30-day streak",
-    description: "An elite tier display of ultimate fitness habit execution over 30 days.",
-    icon: "Lock",
-    type: "gray"
+    description: "Elite habit execution over 30 days.",
+    icon: "Flame",
+    type: "gold",
+    category: "milestone",
+    animated: true
   },
   {
     id: "iron_boss",
     name: "Iron Conqueror",
-    description: "Fell the monthly Boss Challenge under your heavy lifting gauntlet.",
+    description: "Completed the monthly Boss Challenge.",
     icon: "Trophy",
-    type: "blue"
+    type: "blue",
+    category: "performance",
+    animated: true
   },
   {
     id: "squad_lead",
     name: "Squad General",
-    description: "Supported a group effort by carrying over 50% of a group's combined target.",
+    description: "Led a group challenge past the squad goal.",
     icon: "Users",
-    type: "green"
+    type: "green",
+    category: "social"
+  },
+  {
+    id: "variety_week",
+    name: "Balanced week",
+    description: "Logged both strength and cardio in the same week.",
+    icon: "Activity",
+    type: "green",
+    category: "routine"
   }
 ];
 
@@ -217,58 +286,69 @@ export const INITIAL_CHALLENGES: Challenge[] = [
     progress: 66,
     goalText: "2/3 PRs hit",
     xpReward: 500,
-    completed: false
+    completed: false,
+    trackId: "weekly_prs",
+    audience: ["Achiever", "Killer"]
   },
   {
     id: "ch_cardio",
     title: "Cardio Balance",
-    description: "1 high-energy cardio session per week to ensure dynamic conditioning",
+    description: "1 high-energy cardio session per week for dynamic conditioning",
     type: "Weekly",
     progress: 100,
     goalText: "1/1 session",
     xpReward: 350,
-    completed: true
+    completed: true,
+    trackId: "weekly_cardio",
+    audience: ["Explorer"]
   },
   {
     id: "ch_push_perfectionist",
     title: "Push Day Perfectionist",
-    description: "Complete a full push session containing 3+ distinct compound exercises",
+    description: "Log 3+ compound exercises in today's session",
     type: "Daily",
     progress: 100,
-    goalText: "3/3 exercises logged",
+    goalText: "3/3 compounds logged",
     xpReward: 150,
-    completed: true
+    completed: true,
+    trackId: "daily_compounds"
   },
   {
     id: "ch_sprint_lead",
-    title: "Sprint Leaderboard",
-    description: "Maintain the top weekly XP earner ranking among friends",
+    title: "Weekly XP Sprint",
+    description: "Lead friends in weekly XP earned",
     type: "Weekly",
     progress: 55,
     goalText: "Currently Rank #4",
     xpReward: 400,
-    completed: false
+    completed: false,
+    trackId: "weekly_xp_lead",
+    audience: ["Killer", "Socialiser"]
   },
   {
     id: "ch_squad_leg",
     title: "Group: Leg Day Pact",
-    description: "Your squad combines strength indicators to log 10 total leg exercises this week",
+    description: "Your squad combines leg volume to hit the weekly target",
     type: "Group",
     progress: 70,
-    goalText: "7/10 joint sessions completed",
+    goalText: "7/10 squad leg sets",
     xpReward: 600,
-    completed: false
+    completed: false,
+    trackId: "group_leg",
+    squadGoal: 10,
+    squadCurrent: 7,
+    audience: ["Socialiser", "Explorer"]
   }
 ];
 
 export const INITIAL_FRIENDS_LEADERBOARD: LeaderboardEntry[] = [
-  { rank: 1, name: "Ana S.", avatar: "AS", xp: 6100, tier: "Gold" },
-  { rank: 2, name: "João R.", avatar: "JR", xp: 4200, tier: "Silver" },
-  { rank: 3, name: "Tiago F.", avatar: "TF", xp: 3850, tier: "Silver" },
-  { rank: 4, name: "Miguel P.", avatar: "MP", xp: 3100, tier: "Silver", isMe: true },
-  { rank: 5, name: "Carlos F.", avatar: "CF", xp: 2760, tier: "Bronze" },
-  { rank: 6, name: "Maria G.", avatar: "MG", xp: 2430, tier: "Bronze" },
-  { rank: 7, name: "Rui L.", avatar: "RL", xp: 1980, tier: "Bronze" }
+  { rank: 1, name: "Ana S.", avatar: "AS", xp: 6100, weeklyXp: 920, tier: "Gold" },
+  { rank: 2, name: "João R.", avatar: "JR", xp: 4200, weeklyXp: 780, tier: "Silver" },
+  { rank: 3, name: "Tiago F.", avatar: "TF", xp: 3850, weeklyXp: 650, tier: "Silver" },
+  { rank: 4, name: "Miguel P.", avatar: "MP", xp: 3100, weeklyXp: 724, tier: "Silver", isMe: true },
+  { rank: 5, name: "Carlos F.", avatar: "CF", xp: 2760, weeklyXp: 520, tier: "Bronze" },
+  { rank: 6, name: "Maria G.", avatar: "MG", xp: 2430, weeklyXp: 480, tier: "Bronze" },
+  { rank: 7, name: "Rui L.", avatar: "RL", xp: 1980, weeklyXp: 410, tier: "Bronze" }
 ];
 
 export const INITIAL_GLOBAL_LEADERBOARD: LeaderboardEntry[] = [
