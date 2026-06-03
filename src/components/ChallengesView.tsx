@@ -25,7 +25,7 @@ export default function ChallengesView({ bossChallenge, activeChallenges, player
           Quest order personalised for <span className="text-fq-accent">{playerType}</span> players
         </p>
 
-        <div className="fq-card rounded-[18px] p-4 relative overflow-hidden mb-3.5">
+        <div data-tour="boss-card" className="fq-card rounded-[18px] p-4 relative overflow-hidden mb-3.5">
           <div
             className="absolute top-0 left-0 right-0 h-[3px]"
             style={{ background: "linear-gradient(90deg, #7ee8a2, #3db87a)" }}
@@ -72,7 +72,7 @@ export default function ChallengesView({ bossChallenge, activeChallenges, player
         <p className="fq-section-title">Active quests</p>
         <p className="text-[11px] text-white/35 -mt-2 mb-2">Progress updates automatically from your logs</p>
 
-        <div className="space-y-2">
+        <div data-tour="quest-list" className="space-y-2">
           {activeChallenges.map((chall) => (
             <div key={chall.id} className="fq-card rounded-2xl p-3.5">
               <div className="flex justify-between items-start gap-2 mb-1">

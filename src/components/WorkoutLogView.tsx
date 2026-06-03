@@ -304,7 +304,10 @@ export default function WorkoutLogView({ userProfile, onFinishWorkout, onNavigat
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-container px-4 pb-4 space-y-3">
+      <div
+        data-tour="workout-exercises"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-container px-4 pb-4 space-y-3"
+      >
         {exercises.map((ex) => {
           const isCardio = ex.category === "Cardio";
           return (
@@ -363,6 +366,7 @@ export default function WorkoutLogView({ userProfile, onFinishWorkout, onNavigat
       <div className="shrink-0 px-4 py-3 border-t border-white/[0.06] bg-fq-bg safe-bottom">
         <button
           type="button"
+          data-tour="finish-workout"
           onClick={handleComplete}
           disabled={exercises.length === 0}
           className="fq-btn-primary"

@@ -92,7 +92,7 @@ export default function LeaderboardView({
       </header>
 
       <div className="px-4 pb-6">
-        <div className="grid grid-cols-2 gap-1.5 bg-white/[0.04] rounded-xl p-[3px] mb-4">
+        <div data-tour="leaderboard-tabs" className="grid grid-cols-2 gap-1.5 bg-white/[0.04] rounded-xl p-[3px] mb-4">
           {(
             [
               ["Friends", "Friends"],

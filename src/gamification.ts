@@ -86,6 +86,9 @@ export function isLeaderboardUnlocked(profile: UserProfile, workouts: Workout[])
 }
 
 export function isAnalyticsUnlocked(workouts: Workout[]): boolean {
+  if (typeof localStorage !== "undefined" && localStorage.getItem("fq_demo_mode_v1") === "1") {
+    return true;
+  }
   return workouts.filter((w) => w.exercises.length > 0).length >= ANALYTICS_UNLOCK_SESSIONS;
 }
 

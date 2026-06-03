@@ -13,7 +13,15 @@ import {
   Lock
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { fadeUp, tapScale } from "../motionPresets";
 import { daysUntilSeasonReset, TIER_ORDER } from "../gamification";
+import {
+  getStoredTourLang,
+  getTourUi,
+  setStoredTourLang,
+  type TourLang
+} from "../teacherTour";
 
 interface Props {
   userProfile: UserProfile;
@@ -31,6 +39,8 @@ interface Props {
   onClearHomeToast?: () => void;
   onActOnRecommendation: (id: string) => void;
   onDismissNotification: (id: string) => void;
+  onStartTeacherTour?: (lang: TourLang) => void;
+  showTourPromo?: boolean;
 }
 
 function getGreeting() {
@@ -66,10 +76,19 @@ export default function HomeView({
   onLogRestDay,
   onClearHomeToast,
   onActOnRecommendation,
-  onDismissNotification
+  onDismissNotification,
+  onStartTeacherTour,
+  showTourPromo = true
 }: Props) {
   const [notification, setNotification] = useState<string | null>(null);
   const [wellbeingDismissed, setWellbeingDismissed] = useState(false);
+  const [tourLang, setTourLang] = useState<TourLang>(() => getStoredTourLang());
+  const tourUi = getTourUi(tourLang);
+
+  const selectTourLang = (lang: TourLang) => {
+    setTourLang(lang);
+    setStoredTourLang(lang);
+  };
 
   const initials = userProfile.name
     .split(" ")
@@ -165,8 +184,56 @@ export default function HomeView({
       </header>
 
       <div className="px-4 pb-6 space-y-2.5">
-        {/* XP card */}
-        <div className="fq-card rounded-[18px] p-3.5 px-4">
+        <AnimatePresence initial={false}>
+          {showTourPromo && onStartTeacherTour && (
+            <motion.div
+              key="tour-promo"
+              data-tour="tour-welcome"
+              className="fq-card rounded-2xl p-4 border-fq-accent/25 bg-fq-accent/[0.06] overflow-hidden"
+              {...fadeUp}
+            >
+              <p className="text-sm font-medium text-white mb-1">{tourUi.cardTitle}</p>
+              <p className="text-xs text-white/45 leading-relaxed mb-3">{tourUi.cardBody}</p>
+              <div
+                className="flex gap-1.5 mb-3 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06]"
+                role="group"
+                aria-label="Tour language"
+              >
+                {(["en", "pt"] as const).map((lang) => (
+                  <motion.button
+                    key={lang}
+                    type="button"
+                    onClick={() => selectTourLang(lang)}
+                    whileTap={tapScale}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      tourLang === lang
+                        ? "bg-fq-accent text-fq-bg"
+                        : "text-white/45 active:bg-white/[0.06]"
+                    }`}
+                  >
+                    {lang === "en" ? tourUi.langEn : tourUi.langPt}
+                  </motion.button>
+                ))}
+              </div>
+              <motion.button
+                type="button"
+                onClick={() => onStartTeacherTour(tourLang)}
+                whileTap={tapScale}
+                className="w-full py-2.5 rounded-xl bg-fq-accent text-fq-bg text-sm font-medium"
+              >
+                {tourUi.startButton}
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          data-tour="xp-card"
+          className="fq-card rounded-[18px] p-3.5 px-4"
+          initial={false}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
           <div className="flex items-center justify-between mb-2">
             <div>
               <p className="text-[13px] text-white/50">Level</p>
@@ -179,7 +246,7 @@ export default function HomeView({
           <div className="fq-xp-bar-bg">
             <div className="fq-xp-bar-fill" style={{ width: `${xpPercent}%` }} />
           </div>
-        </div>
+        </motion.div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-2">
@@ -283,7 +350,7 @@ export default function HomeView({
         )}
 
         {/* Streak protection */}
-        <div className="fq-card rounded-2xl p-3.5 flex items-center gap-3">
+        <div data-tour="streak-shield" className="fq-card rounded-2xl p-3.5 flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-fq-accent/10 border border-fq-accent/20 flex items-center justify-center shrink-0">
             <Shield className="w-5 h-5 text-fq-accent" />
           </div>
@@ -357,7 +424,7 @@ export default function HomeView({
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div data-tour="friend-feed" className="space-y-2">
           {(leaderboardUnlocked ? socialFeed : socialFeed.filter((e) => e.isMe)).map((entry) => (
             <article key={entry.id} className="fq-card rounded-2xl p-3.5">
               <div className="flex items-center justify-between mb-1.5">

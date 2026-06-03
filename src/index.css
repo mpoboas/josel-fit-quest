@@ -219,3 +219,178 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Driver.js — guided tour popover */
+.driver-popover.fitquest-driver-popover {
+  box-sizing: border-box;
+  display: block;
+  position: fixed;
+  z-index: 1000000001;
+  width: min(400px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  background: #141b22 !important;
+  color: #f0f0f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(126, 232, 162, 0.08) !important;
+  font-family: Inter, system-ui, sans-serif !important;
+  overflow: hidden;
+}
+
+.fitquest-driver-popover .driver-popover-title {
+  display: block !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  color: #fff !important;
+  padding: 1.125rem 3rem 0 1.125rem !important;
+  margin: 0 !important;
+}
+
+.fitquest-driver-popover .driver-popover-description {
+  display: block !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.55 !important;
+  color: rgba(255, 255, 255, 0.62) !important;
+  padding: 0.5rem 1.125rem 0 !important;
+  margin: 0 !important;
+}
+
+.fitquest-driver-popover .driver-popover-close-btn {
+  box-sizing: border-box;
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  z-index: 2 !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 1.25rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.fitquest-driver-popover .driver-popover-close-btn:hover,
+.fitquest-driver-popover .driver-popover-close-btn:focus {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+.fitquest-driver-popover .driver-popover-footer {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  margin: 0 !important;
+  padding: 1rem 1.125rem 1.125rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.fitquest-driver-popover .driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  font-variant-numeric: tabular-nums;
+  color: #7ee8a2 !important;
+  letter-spacing: 0.02em;
+}
+
+.fitquest-driver-popover .driver-popover-navigation-btns {
+  display: flex !important;
+  gap: 0.5rem !important;
+  margin-left: auto !important;
+}
+
+.fitquest-driver-popover .driver-popover-prev-btn,
+.fitquest-driver-popover .driver-popover-next-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 2.75rem !important;
+  padding: 0 1rem !important;
+  border-radius: 10px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-shadow: none !important;
+  border: none !important;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.fitquest-driver-popover .driver-popover-prev-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.fitquest-driver-popover .driver-popover-next-btn {
+  background: #7ee8a2 !important;
+  color: #0e1117 !important;
+  min-width: 5.5rem !important;
+}
+
+.fitquest-driver-popover .driver-popover-prev-btn:active,
+.fitquest-driver-popover .driver-popover-next-btn:active {
+  transform: scale(0.97);
+}
+
+.fitquest-driver-popover .driver-popover-prev-btn:hover,
+.fitquest-driver-popover .driver-popover-next-btn:hover {
+  opacity: 0.92;
+}
+
+/* Popover arrow matches card */
+.fitquest-driver-popover .driver-popover-arrow {
+  border-width: 8px !important;
+}
+
+.fitquest-driver-popover .driver-popover-arrow-side-top {
+  border-top-color: #141b22 !important;
+}
+
+.fitquest-driver-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: #141b22 !important;
+}
+
+.fitquest-driver-popover .driver-popover-arrow-side-left {
+  border-left-color: #141b22 !important;
+}
+
+.fitquest-driver-popover .driver-popover-arrow-side-right {
+  border-right-color: #141b22 !important;
+}
+
+.driver-active-element {
+  border-radius: 12px !important;
+}
+
+@media (min-width: 640px) {
+  .driver-popover.fitquest-driver-popover {
+    width: min(420px, calc(100vw - 48px));
+  }
+
+  .fitquest-driver-popover .driver-popover-title {
+    font-size: 1.0625rem !important;
+    padding: 1.25rem 3.25rem 0 1.25rem !important;
+  }
+
+  .fitquest-driver-popover .driver-popover-description {
+    font-size: 0.875rem !important;
+    padding: 0.625rem 1.25rem 0 !important;
+  }
+
+  .fitquest-driver-popover .driver-popover-footer {
+    padding: 1.125rem 1.25rem 1.25rem !important;
+  }
+}

@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { pageTransition, tapScale } from "./motionPresets";
 import type {
   UserProfile,
   Workout,
@@ -47,6 +49,16 @@ import OnboardingSurvey from "./components/OnboardingSurvey";
 import MainQuizOverlay from "./components/MainQuizOverlay";
 import RankUpOverlay from "./components/RankUpOverlay";
 import MilestoneFeedbackModal from "./components/MilestoneFeedbackModal";
+import { loadTeacherDemo } from "./demoMode";
+import {
+  getStoredTourLang,
+  isTeacherTourDone,
+  parseTourLangParam,
+  setStoredTourLang,
+  shouldAutoStartTour,
+  startTeacherTour,
+  type TourLang
+} from "./teacherTour";
 
 import { Home, Plus, Trophy, Target, User } from "lucide-react";
 
@@ -134,6 +146,22 @@ export default function App() {
   const [rankUpOverlay, setRankUpOverlay] = useState<RankUpResult | null>(null);
   const [milestoneKey, setMilestoneKey] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const tourAutoStarted = useRef(false);
+  const [tourCompleted, setTourCompleted] = useState(() => isTeacherTourDone());
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = parseTourLangParam(params.get("lang"));
+    if (urlLang) setStoredTourLang(urlLang);
+
+    if (params.get("tour") === "1" && sessionStorage.getItem("fq_demo_seeded") !== "1") {
+      loadTeacherDemo({ restartTour: true });
+      sessionStorage.setItem("fq_demo_seeded", "1");
+      const next = new URLSearchParams({ tour: "1" });
+      if (urlLang) next.set("lang", urlLang);
+      window.location.replace(`${window.location.pathname}?${next.toString()}`);
+    }
+  }, []);
 
   const leaderboardUnlocked = isLeaderboardUnlocked(userProfile, workoutHistory);
   const analyticsUnlocked = isAnalyticsUnlocked(workoutHistory);
@@ -420,6 +448,18 @@ export default function App() {
     setAnalytics((a) => logEvent(a, "tab_view", { tab }));
   };
 
+  const handleStartTeacherTour = useCallback((lang: TourLang) => {
+    startTeacherTour(handleTabChange, lang, {
+      onComplete: () => setTourCompleted(true)
+    });
+  }, []);
+
+  const handleLoadTeacherDemo = useCallback(() => {
+    loadTeacherDemo({ restartTour: true });
+    sessionStorage.setItem("fq_demo_seeded", "1");
+    window.location.reload();
+  }, []);
+
   const resetAllLocalState = () => {
     if (confirm("Reset FitQuest and wipe all progress?")) {
       [
@@ -433,7 +473,11 @@ export default function App() {
         "fq_social_feed_v2",
         "fq_notifications_v2",
         "fq_recommendations_v2",
-        "fq_analytics_v2"
+        "fq_analytics_v2",
+        "fq_teacher_tour_done_v1",
+        "fq_demo_mode_v1",
+        "fq_auto_tour_v1",
+        "fq_tour_lang_v1"
       ].forEach((k) => localStorage.removeItem(k));
       window.location.reload();
     }
@@ -442,6 +486,18 @@ export default function App() {
   const showMainApp = userProfile.onboardingPhase === "done";
   const showOctalysis =
     userProfile.onboardingPhase === "octalysis" || (showDrivesQuiz && showMainApp);
+
+  useEffect(() => {
+    if (!showMainApp || tourAutoStarted.current || isTeacherTourDone()) return;
+    if (!shouldAutoStartTour()) return;
+    tourAutoStarted.current = true;
+    const timer = window.setTimeout(() => {
+      startTeacherTour(handleTabChange, getStoredTourLang(), {
+        onComplete: () => setTourCompleted(true)
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [showMainApp, handleTabChange]);
 
   return (
     <div className="h-dvh bg-fq-bg flex flex-col font-sans text-[#f0f0f0] safe-x overflow-hidden">
@@ -476,70 +532,86 @@ export default function App() {
         <>
           <main className="flex-1 min-h-0 overflow-hidden main-with-nav">
             <div className="h-full min-h-0">
-              {activeTab === "Home" && (
-                <HomeView
-                  userProfile={userProfile}
-                  workoutHistory={workoutHistory}
-                  activeChallenges={orderedChallenges}
-                  socialFeed={socialFeed}
-                  recommendations={recommendations}
-                  notifications={notifications}
-                  homeToast={homeToast}
-                  leaderboardUnlocked={leaderboardUnlocked}
-                  onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
-                  onNavigateToTab={(t) => handleTabChange(t as Tab)}
-                  onHighFiveFeed={handleHighFiveFeed}
-                  onLogRestDay={handleLogRestDay}
-                  onClearHomeToast={() => setHomeToast(null)}
-                  onActOnRecommendation={handleActOnRecommendation}
-                  onDismissNotification={(id) =>
-                    setNotifications((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x)))
-                  }
-                />
-              )}
-              {activeTab === "Log" && (
-                <WorkoutLogView
-                  userProfile={userProfile}
-                  lastWorkout={workoutHistory[0]}
-                  onFinishWorkout={handleFinishWorkout}
-                  onNavigateToTab={(t) => handleTabChange(t as Tab)}
-                />
-              )}
-              {activeTab === "Rank" && (
-                <LeaderboardView
-                  userProfile={userProfile}
-                  friendsLeaderboard={friendsLeaderboard}
-                  globalLeaderboard={globalLeaderboard}
-                  workoutHistory={workoutHistory}
-                  leaderboardUnlocked={leaderboardUnlocked}
-                  onChangeLeaderboards={(friends, global) => {
-                    setFriendsLeaderboard(friends);
-                    setGlobalLeaderboard(global);
-                  }}
-                />
-              )}
-              {activeTab === "Goals" && (
-                <ChallengesView
-                  bossChallenge={bossChallenge}
-                  activeChallenges={syncedChallenges}
-                  playerType={userProfile.playerType}
-                />
-              )}
-              {activeTab === "Profile" && (
-                <ProfileView
-                  userProfile={userProfile}
-                  workoutHistory={workoutHistory}
-                  badges={badges}
-                  analyticsUnlocked={analyticsUnlocked}
-                  analyticsEventCount={analytics.length}
-                  onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
-                  onNavigateToTab={(t) => handleTabChange(t as Tab)}
-                  onOpenDrivesQuiz={() => setShowDrivesQuiz(true)}
-                  onResetApp={resetAllLocalState}
-                  onToggleFollow={handleToggleFollow}
-                  friendsLeaderboard={friendsLeaderboard}
-                />
-              )}
+              <AnimatePresence mode="wait">
+                {activeTab === "Home" && (
+                  <motion.div key="Home" className="h-full min-h-0" {...pageTransition}>
+                    <HomeView
+                      userProfile={userProfile}
+                      workoutHistory={workoutHistory}
+                      activeChallenges={orderedChallenges}
+                      socialFeed={socialFeed}
+                      recommendations={recommendations}
+                      notifications={notifications}
+                      homeToast={homeToast}
+                      leaderboardUnlocked={leaderboardUnlocked}
+                      showTourPromo={!tourCompleted}
+                      onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
+                      onNavigateToTab={(t) => handleTabChange(t as Tab)}
+                      onHighFiveFeed={handleHighFiveFeed}
+                      onLogRestDay={handleLogRestDay}
+                      onClearHomeToast={() => setHomeToast(null)}
+                      onActOnRecommendation={handleActOnRecommendation}
+                      onDismissNotification={(id) =>
+                        setNotifications((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x)))
+                      }
+                      onStartTeacherTour={handleStartTeacherTour}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === "Log" && (
+                  <motion.div key="Log" className="h-full min-h-0" {...pageTransition}>
+                    <WorkoutLogView
+                      userProfile={userProfile}
+                      lastWorkout={workoutHistory[0]}
+                      onFinishWorkout={handleFinishWorkout}
+                      onNavigateToTab={(t) => handleTabChange(t as Tab)}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === "Rank" && (
+                  <motion.div key="Rank" className="h-full min-h-0" {...pageTransition}>
+                    <LeaderboardView
+                      userProfile={userProfile}
+                      friendsLeaderboard={friendsLeaderboard}
+                      globalLeaderboard={globalLeaderboard}
+                      workoutHistory={workoutHistory}
+                      leaderboardUnlocked={leaderboardUnlocked}
+                      onChangeLeaderboards={(friends, global) => {
+                        setFriendsLeaderboard(friends);
+                        setGlobalLeaderboard(global);
+                      }}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === "Goals" && (
+                  <motion.div key="Goals" className="h-full min-h-0" {...pageTransition}>
+                    <ChallengesView
+                      bossChallenge={bossChallenge}
+                      activeChallenges={syncedChallenges}
+                      playerType={userProfile.playerType}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === "Profile" && (
+                  <motion.div key="Profile" className="h-full min-h-0" {...pageTransition}>
+                    <ProfileView
+                      userProfile={userProfile}
+                      workoutHistory={workoutHistory}
+                      badges={badges}
+                      analyticsUnlocked={analyticsUnlocked}
+                      analyticsEventCount={analytics.length}
+                      onChangeUserProfile={(updates) => setUserProfile((prev) => ({ ...prev, ...updates }))}
+                      onNavigateToTab={(t) => handleTabChange(t as Tab)}
+                      onOpenDrivesQuiz={() => setShowDrivesQuiz(true)}
+                      onResetApp={resetAllLocalState}
+                      onToggleFollow={handleToggleFollow}
+                      friendsLeaderboard={friendsLeaderboard}
+                      onStartTeacherTour={handleStartTeacherTour}
+                      onLoadTeacherDemo={handleLoadTeacherDemo}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </main>
 
@@ -556,11 +628,13 @@ export default function App() {
 
                 if (isLog) {
                   return (
-                    <button
+                    <motion.button
                       key={id}
+                      data-tour="nav-log"
                       onClick={() => handleTabChange(id)}
                       aria-label={label}
                       aria-current={isActive ? "page" : undefined}
+                      whileTap={tapScale}
                       className="flex flex-col items-center justify-center flex-none mx-1 touch-target"
                       style={{ marginBottom: 4 }}
                     >
@@ -575,24 +649,35 @@ export default function App() {
                       >
                         <Icon className="w-[22px] h-[22px] stroke-[2.5px]" />
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 }
 
+                const tourId =
+                  id === "Home"
+                    ? "nav-home"
+                    : id === "Rank"
+                      ? "nav-rank"
+                      : id === "Goals"
+                        ? "nav-goals"
+                        : "nav-profile";
+
                 return (
-                  <button
+                  <motion.button
                     key={id}
+                    data-tour={tourId}
                     onClick={() => !locked && handleTabChange(id)}
                     aria-label={label}
                     aria-current={isActive ? "page" : undefined}
                     disabled={locked}
-                    className={`flex flex-col items-center gap-[3px] flex-1 touch-target transition-colors active:scale-95 ${
+                    whileTap={locked ? undefined : tapScale}
+                    className={`flex flex-col items-center gap-[3px] flex-1 touch-target transition-colors ${
                       isActive ? "text-fq-accent" : locked ? "text-white/15" : "text-white/35"
                     }`}
                   >
                     <Icon className="w-5 h-5" strokeWidth={isActive ? 2.25 : 1.75} />
                     <span className="text-[10px] font-medium">{label}</span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>

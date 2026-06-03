@@ -15,6 +15,7 @@ import {
   Download
 } from "lucide-react";
 import { ANALYTICS_UNLOCK_SESSIONS, needsQuarterlyOctalysis } from "../gamification";
+import { getStoredTourLang, getTourUi, type TourLang } from "../teacherTour";
 
 interface Props {
   userProfile: UserProfile;
@@ -28,6 +29,8 @@ interface Props {
   onOpenDrivesQuiz: () => void;
   onResetApp: () => void;
   onToggleFollow: (name: string) => void;
+  onStartTeacherTour?: (lang: TourLang) => void;
+  onLoadTeacherDemo?: () => void;
 }
 
 function formatDriveLabel(key: string) {
@@ -43,10 +46,13 @@ export default function ProfileView({
   friendsLeaderboard,
   onOpenDrivesQuiz,
   onResetApp,
-  onToggleFollow
+  onToggleFollow,
+  onStartTeacherTour,
+  onLoadTeacherDemo
 }: Props) {
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const tourRestartLabel = getTourUi(getStoredTourLang()).settingsRestart;
 
   const computedStats = useMemo(() => {
     let totalKgsLifted = 0;
@@ -230,7 +236,7 @@ export default function ProfileView({
           })}
         </div>
 
-        <div className="fq-card rounded-2xl p-3.5 mb-3.5">
+        <div data-tour="motivation-card" className="fq-card rounded-2xl p-3.5 mb-3.5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-white">Motivation profile</p>
             <button onClick={onOpenDrivesQuiz} className="text-xs text-fq-accent font-medium active:opacity-80">
@@ -250,7 +256,7 @@ export default function ProfileView({
 
         {/* Badges */}
         <p className="fq-section-title !mt-0">Badges</p>
-        <div className="grid grid-cols-3 gap-2 mb-3.5">
+        <div data-tour="badges-grid" className="grid grid-cols-3 gap-2 mb-3.5">
           {badges.map((badge) => {
             const isUnlocked = !!badge.unlockedAt;
             return (
@@ -273,6 +279,7 @@ export default function ProfileView({
         </div>
 
         <p className="fq-section-title !mt-0">Analytics dashboard</p>
+        <div data-tour="analytics-section">
         {!analyticsUnlocked ? (
           <div className="fq-card rounded-2xl p-4 flex items-start gap-3 mb-3.5">
             <Lock className="w-5 h-5 text-white/35 shrink-0" />
@@ -352,6 +359,7 @@ export default function ProfileView({
             </p>
           </>
         )}
+        </div>
       </div>
 
       {selectedBadge && (
@@ -400,6 +408,30 @@ export default function ProfileView({
                 <span className="text-sm text-white">Motivation quiz</span>
                 <ChevronRight className="w-5 h-5 text-white/35" />
               </button>
+              {onLoadTeacherDemo && (
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    onLoadTeacherDemo();
+                  }}
+                  className="w-full px-5 py-4 flex items-center gap-3 active:bg-white/5 text-fq-accent text-left"
+                >
+                  <Award className="w-5 h-5 shrink-0" />
+                  <span className="text-sm font-medium">Load evaluator demo data</span>
+                </button>
+              )}
+              {onStartTeacherTour && (
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    onStartTeacherTour(getStoredTourLang());
+                  }}
+                  className="w-full px-5 py-4 flex items-center gap-3 active:bg-white/5 text-left"
+                >
+                  <ChevronRight className="w-5 h-5 text-slate-500" />
+                  <span className="text-sm text-white">{tourRestartLabel}</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setShowSettings(false);
