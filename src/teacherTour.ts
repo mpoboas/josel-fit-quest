@@ -200,6 +200,25 @@ export function shouldAutoStartTour(): boolean {
   return localStorage.getItem("fq_auto_tour_v1") === "1";
 }
 
+const PENDING_TOUR_START_KEY = "fq_pending_tour_start_v1";
+
+export function markPendingTourStart(lang: TourLang): void {
+  sessionStorage.setItem(PENDING_TOUR_START_KEY, lang);
+}
+
+export function getPendingTourLang(): TourLang | null {
+  const lang = sessionStorage.getItem(PENDING_TOUR_START_KEY);
+  return lang === "en" || lang === "pt" ? lang : null;
+}
+
+export function hasPendingTourStart(): boolean {
+  return getPendingTourLang() != null;
+}
+
+export function consumePendingTourStart(): void {
+  sessionStorage.removeItem(PENDING_TOUR_START_KEY);
+}
+
 export function createTeacherTour(setTab: TabChanger, lang: TourLang): Driver {
   activeSteps = buildStepConfigs(lang);
   const ui = getTourUi(lang);

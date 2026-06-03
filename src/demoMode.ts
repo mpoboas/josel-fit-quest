@@ -41,3 +41,12 @@ export function loadTeacherDemo(options?: { restartTour?: boolean }) {
 export function isDemoMode(): boolean {
   return localStorage.getItem(DEMO_MODE_KEY) === "1";
 }
+
+/** Seed demo data and reload when the tour needs unlocked sample content. */
+export function ensureDemoDataForTour(): boolean {
+  if (isDemoMode()) return false;
+
+  loadTeacherDemo({ restartTour: true });
+  window.location.reload();
+  return true;
+}

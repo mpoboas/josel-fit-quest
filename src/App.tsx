@@ -49,10 +49,14 @@ import OnboardingSurvey from "./components/OnboardingSurvey";
 import MainQuizOverlay from "./components/MainQuizOverlay";
 import RankUpOverlay from "./components/RankUpOverlay";
 import MilestoneFeedbackModal from "./components/MilestoneFeedbackModal";
-import { loadTeacherDemo } from "./demoMode";
+import { ensureDemoDataForTour, loadTeacherDemo } from "./demoMode";
 import {
+  consumePendingTourStart,
+  getPendingTourLang,
   getStoredTourLang,
+  hasPendingTourStart,
   isTeacherTourDone,
+  markPendingTourStart,
   parseTourLangParam,
   setStoredTourLang,
   shouldAutoStartTour,
@@ -154,12 +158,9 @@ export default function App() {
     const urlLang = parseTourLangParam(params.get("lang"));
     if (urlLang) setStoredTourLang(urlLang);
 
-    if (params.get("tour") === "1" && sessionStorage.getItem("fq_demo_seeded") !== "1") {
-      loadTeacherDemo({ restartTour: true });
-      sessionStorage.setItem("fq_demo_seeded", "1");
-      const next = new URLSearchParams({ tour: "1" });
-      if (urlLang) next.set("lang", urlLang);
-      window.location.replace(`${window.location.pathname}?${next.toString()}`);
+    if (!isTeacherTourDone() && shouldAutoStartTour()) {
+      markPendingTourStart(urlLang ?? getStoredTourLang());
+      ensureDemoDataForTour();
     }
   }, []);
 
@@ -448,15 +449,27 @@ export default function App() {
     setAnalytics((a) => logEvent(a, "tab_view", { tab }));
   };
 
-  const handleStartTeacherTour = useCallback((lang: TourLang) => {
+  const beginTeacherTour = useCallback((lang: TourLang) => {
+    if (tourAutoStarted.current) return;
+    tourAutoStarted.current = true;
+    consumePendingTourStart();
     startTeacherTour(handleTabChange, lang, {
       onComplete: () => setTourCompleted(true)
     });
   }, []);
 
+  const handleStartTeacherTour = useCallback(
+    (lang: TourLang) => {
+      markPendingTourStart(lang);
+      if (ensureDemoDataForTour()) return;
+      beginTeacherTour(lang);
+    },
+    [beginTeacherTour]
+  );
+
   const handleLoadTeacherDemo = useCallback(() => {
     loadTeacherDemo({ restartTour: true });
-    sessionStorage.setItem("fq_demo_seeded", "1");
+    markPendingTourStart(getStoredTourLang());
     window.location.reload();
   }, []);
 
@@ -488,19 +501,17 @@ export default function App() {
     userProfile.onboardingPhase === "octalysis" || (showDrivesQuiz && showMainApp);
 
   useEffect(() => {
-    if (!showMainApp || tourAutoStarted.current || isTeacherTourDone()) return;
-    if (!shouldAutoStartTour()) return;
-    tourAutoStarted.current = true;
-    const timer = window.setTimeout(() => {
-      startTeacherTour(handleTabChange, getStoredTourLang(), {
-        onComplete: () => setTourCompleted(true)
-      });
-    }, 900);
+    if (!showMainApp || isTeacherTourDone()) return;
+    if (!hasPendingTourStart() && !shouldAutoStartTour()) return;
+    if (ensureDemoDataForTour()) return;
+
+    const lang = getPendingTourLang() ?? getStoredTourLang();
+    const timer = window.setTimeout(() => beginTeacherTour(lang), 900);
     return () => window.clearTimeout(timer);
-  }, [showMainApp, handleTabChange]);
+  }, [showMainApp, beginTeacherTour]);
 
   return (
-    <div className="h-dvh bg-fq-bg flex flex-col font-sans text-[#f0f0f0] safe-x overflow-hidden">
+    <div className="fq-app-shell h-dvh w-full bg-fq-bg flex flex-col font-sans text-[#f0f0f0] safe-x overflow-hidden">
       {userProfile.onboardingPhase === "survey" && (
         <OnboardingSurvey onComplete={handleOnboardingSurveyComplete} />
       )}
